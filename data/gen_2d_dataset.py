@@ -8,20 +8,20 @@ from sdf import image
 os.makedirs('input', exist_ok=True)
 
 
-def generate_2d_dataset_from_sdf(f, n_samples, scale):
+def generate_2d_dataset_from_sdf(f, n_samples, min, max):
     # default scale for all 2d sdf is 1.0, which means their bbox is [0, 0] to [1, 1]
-    X = np.random.uniform(-0.1 * scale, 1.1 * scale, (n_samples, 2))
+    X = np.random.uniform(min, max, (n_samples, 2))
     Y = f(X)
     return X, Y
 
 
-def visualize_samples(X, Y, scale, image_path):
+def visualize_samples(X, Y, image_path, min, max):
     plt.figure(figsize=(8, 8))
     plt.scatter(X[:, 0], X[:, 1], c=Y, cmap='viridis', s=1)
     plt.colorbar(label='SDF Value')
     plt.title('2D SDF Samples')
-    plt.xlim(-0.1 * scale, 1.1 * scale)
-    plt.ylim(-0.1 * scale, 1.1 * scale)
+    plt.xlim(min, max)
+    plt.ylim(min, max)
     plt.savefig(image_path)
     plt.close()
 
@@ -50,17 +50,22 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     if hasattr(args, 'image') and args.image is not None:
+        min = -0.5 * args.scale
+        max = 0.5 * args.scale
         X, Y = generate_2d_dataset_from_sdf(
-            image(args.image, args.scale), args.n_samples, args.scale
+            image(args.image, args.scale, args.scale), args.n_samples, min, max
         )
-        visualize_samples(X, Y, args.scale, f'input/{args.image}_samples.png')
-        np.save(f'input/{args.image}_X.npy', X)
-        np.save(f'input/{args.image}_Y.npy', Y)
+        image_name = os.path.splitext(os.path.basename(args.image))[0]
+        visualize_samples(X, Y, f'input/{image_name}_samples.png', min, max)
+        np.save(f'input/{image_name}_X.npy', X)
+        np.save(f'input/{image_name}_Y.npy', Y)
     elif hasattr(args, 'sdf') and args.sdf is not None:
+        min = -0.1 * args.scale
+        max = 1.1 * args.scale
         X, Y = generate_2d_dataset_from_sdf(
-            globals()[args.sdf](args.order, args.scale), args.n_samples, args.scale
+            globals()[args.sdf](args.order, args.scale), args.n_samples, min, max
         )
-        visualize_samples(X, Y, args.scale, f'input/{args.sdf}_samples.png')
+        visualize_samples(X, Y, f'input/{args.sdf}_samples.png', min, max)
         np.save(f'input/{args.sdf}_X.npy', X)
         np.save(f'input/{args.sdf}_Y.npy', Y)
     else:
