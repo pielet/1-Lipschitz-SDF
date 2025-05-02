@@ -1,0 +1,9 @@
+[submodule "extern/sdf"]
+	path = extern/sdf
+	url = https://github.com/fogleman/sdf.git
+[submodule "extern/openvdb"]
+	path = extern/openvdb
+	url = https://github.com/AcademySoftwareFoundation/openvdb.git
+[submodule "extern/nanobind"]
+	path = extern/nanobind
+	url = https://github.com/wjakob/nanobind.git

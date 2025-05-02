@@ -1,0 +1,37 @@
+[project]
+name = "1lip"
+version = "0.1.0"
+description = "1-Lipchitz network for implicit shape representation"
+authors = [
+    {name = "pielet",email = "syjia0325@gmail.com"}
+]
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = [
+]
+
+[tool.poetry]
+
+[tool.poetry.group.dev.dependencies]
+jax = "^0.6.0"
+pre-commit = "^4.2.0"
+
+[tool.ruff]
+target-version = "py313"
+line-length = 100
+
+[tool.ruff.lint]
+extend-select = [
+    "E501",  # line too long
+    "UP",    # pyupgrade
+    "F",     # flake8
+    "I",     # isort
+]
+
+[tool.ruff.format]
+quote-style = "single"
+docstring-code-format = true
+
+[build-system]
+requires = ["poetry-core>=2.0.0,<3.0.0"]
+build-backend = "poetry.core.masonry.api"

@@ -1,0 +1,15 @@
+name: 1Lipchitz
+channels:
+  - conda-forge
+  - defaults
+dependencies:
+  - python=3.13
+  - matplotlib
+  - tqdm
+  - pip
+  - jax
+  - pip:
+    - ruff
+    - pre-commit
+    - libigl==2.5.4.dev0
+    - ipykernel
