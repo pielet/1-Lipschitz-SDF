@@ -57,8 +57,7 @@ if __name__ == '__main__':
         )
         image_name = os.path.splitext(os.path.basename(args.image))[0]
         visualize_samples(X, Y, f'input/{image_name}_samples.png', min, max)
-        np.save(f'input/{image_name}_X.npy', X)
-        np.save(f'input/{image_name}_Y.npy', Y)
+        np.savez(f'input/{image_name}.npz', X=X, Y=Y)
     elif hasattr(args, 'sdf') and args.sdf is not None:
         min = -0.1 * args.scale
         max = 1.1 * args.scale
@@ -66,7 +65,6 @@ if __name__ == '__main__':
             globals()[args.sdf](args.order, args.scale), args.n_samples, min, max
         )
         visualize_samples(X, Y, f'input/{args.sdf}_samples.png', min, max)
-        np.save(f'input/{args.sdf}_X.npy', X)
-        np.save(f'input/{args.sdf}_Y.npy', Y)
+        np.savez(f'input/{args.sdf}.npz', X=X, Y=Y)
     else:
         raise ValueError('Please provide either an image or sdf name.')

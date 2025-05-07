@@ -50,6 +50,7 @@ class Mesh:
 
 
 def gearlike() -> SDF3:
+    "from: https://github.com/fogleman/sdf/blob/main/examples/gearlike.py"
     f = sphere(2) & slab(z0=-0.5, z1=0.5).k(0.1)
     f -= cylinder(1).k(0.1)
     f -= cylinder(0.25).circular_array(16, 2).k(0.1)
@@ -57,6 +58,7 @@ def gearlike() -> SDF3:
 
 
 def blobby() -> SDF3:
+    "from: https://github.com/fogleman/sdf/blob/main/examples/blobby.py"
     X = np.array((1, 0, 0))
     Y = np.array((0, 1, 0))
     Z = np.array((0, 0, 1))
@@ -71,6 +73,7 @@ def blobby() -> SDF3:
 
 def koch_snowflake(order, scale=1) -> SDF2:
     """Generate a Koch snowflake fractal.
+
     Args:
         order (int): The order of the Koch snowflake.
         scale (float): Scaling factor for the snowflake (from equilateral_triangle of size 1).
@@ -100,6 +103,7 @@ def koch_snowflake(order, scale=1) -> SDF2:
 @sdf2
 def sierpinski_triangle(order, scale=1):
     """Generate a Sierpinski triangle fractal.
+
     Args:
         order (int): The order of the Sierpinski triangle.
         scale (float): Scaling factor for the triangle (from equilateral_triangle of size 1).
