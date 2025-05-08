@@ -16,3 +16,7 @@ dependencies:
     - pre-commit
     - libigl==2.5.4.dev0
     - ipykernel
+    - flax
+    - optax
+    - wandb
+    - omegaconf

@@ -178,3 +178,9 @@ cython_debug/
 # generated data
 input/
 output/
+
+# log tmp files
+wandb/
+
+# gitmodule
+extern/
