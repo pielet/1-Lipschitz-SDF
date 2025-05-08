@@ -1,17 +1,17 @@
 # 1-lipschitz network
 
-to make hyperparameter tuning easier, and explore different nn architecture.
+to make hyperparameter tuning easier, and explore different nn architectures.
 
-## Environments
+## Environment
 
 Recursively clone the repo, then create and activate conda virtual environment:
 ```bash
-conda env create -f environments.yaml
+conda env create -f environment.yaml
 conda activate 1Lipchitz
 ```
 
 ## Dataset generation
-Dataset are generated from mesh or explicit sdf
+Dataset are generated from mesh or explicit [sdf](https://github.com/fogleman/sdf), or binary svg for 2D.
 
 Install nanobind:
 
@@ -32,6 +32,26 @@ mkdir build && cd build
 cmake -D OPENVDB_BUILD_PYTHON_MODULE=ON -D USE_NUMPY=ON -DCMAKE_PREFIX_PATH=$(python -c "import sysconfig; print(sysconfig.get_paths()['purelib'])") ..
 make -j8
 cp openvdb/openvdb/python/openvdb.* `python -c 'import site; print(site.getsitepackages()[0])'`
+```
+
+Generate 2d samples from svg
+
+```bash
+python data/gen_2d_dataset.py config/butterfly.yaml
+```
+
+or from a pre-defined fractal shape. For instance, Von Koch snowflacks with 3 orders of recursions:
+
+```bash
+python data/gen_2d_dataset.py config/koch.yaml
+```
+
+## Training
+
+Choose model from SIREN, FFN, or SLL. SLL uses semi-supervised loss which only requires inside/outside labels.
+
+```bash
+python train.py config/butterfly.yaml
 ```
 
 **Reference repo:**
