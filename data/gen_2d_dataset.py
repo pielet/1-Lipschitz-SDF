@@ -6,15 +6,16 @@ import numpy as np
 from omegaconf import OmegaConf
 from sdf import image
 
-from data.shapes import koch_snowflake, sierpinski_triangle
-
-os.makedirs('input', exist_ok=True)
+try:
+    from data.shapes import koch_snowflake, sierpinski_triangle
+except ImportError:
+    from shapes import koch_snowflake, sierpinski_triangle
 
 
 def parse_config(config_path):
     with open(config_path) as f:
         config = OmegaConf.load(f)
-    return OmegaConf.to_container(config, resolve=True)
+    return config
 
 
 def select_sdf(cfg):
@@ -54,6 +55,7 @@ def visualize_samples(X, Y, image_path, min, max):
 
 if __name__ == '__main__':
     import sys
+    os.makedirs('input', exist_ok=True)
 
     cfg = parse_config(sys.argv[1])
     f = select_sdf(cfg)
