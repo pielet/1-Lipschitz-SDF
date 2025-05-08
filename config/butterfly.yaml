@@ -1,0 +1,18 @@
+dataset: butterfly
+
+# sample
+n_samples: 10000
+scale: 1.0
+sample_min: 0.0
+sample_max: 1.0
+
+# training
+epochs: 100
+batch_size: 128
+learning_rate: 0.001
+log_interval: 10
+model:
+  type: siren
+  hidden_layers: 3
+  hidden_units: 128
+save_pretrained: true
