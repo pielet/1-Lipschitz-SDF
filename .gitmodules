@@ -1,6 +1,6 @@
 [submodule "extern/sdf"]
 	path = extern/sdf
-	url = https://github.com/fogleman/sdf.git
+	url = https://github.com/pielet/sdf.git
 [submodule "extern/openvdb"]
 	path = extern/openvdb
 	url = https://github.com/AcademySoftwareFoundation/openvdb.git
