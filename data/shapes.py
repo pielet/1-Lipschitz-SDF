@@ -122,7 +122,7 @@ def sierpinski_triangle(order, scale=1):
                 + sierpinski(order - 1, mid20, mid12, p2)
             )
 
-    def point_in_triangle(p, a, b, c, eps=1e-6) -> bool:
+    def point_in_triangle(p, a, b, c, eps=1e-6):
         v0, v1, v2 = c - a, b - a, p - a
         d00, d11 = np.dot(v0, v0), np.dot(v1, v1)
         d01, d20, d21 = np.dot(v0, v1), np.dot(v2, v0), np.dot(v2, v1)
@@ -132,13 +132,13 @@ def sierpinski_triangle(order, scale=1):
         # barycentric coordinates
         u = (d11 * d20 - d01 * d21) / denom
         v = (d00 * d21 - d01 * d20) / denom
-        return (u >= 0) and (v >= 0) and (u + v <= 1)
+        return (u >= 0) & (v >= 0) & (u + v <= 1)
 
-    def point_line_distance(p, a, b) -> float:
+    def point_line_distance(p: np.ndarray, a, b) -> np.ndarray:
         ab = b - a
         t = np.clip(np.dot(p - a, ab) / np.dot(ab, ab), 0, 1)
-        projection = a + t * ab
-        return np.linalg.norm(p - projection)
+        projection = a + np.outer(t, ab)
+        return np.linalg.norm(p - projection, axis=1)
 
     triangles = sierpinski(
         order,
@@ -147,21 +147,17 @@ def sierpinski_triangle(order, scale=1):
         scale * np.array([1, 0]),
     )
 
-    def f(ps):
-        sd = np.zeros(ps.shape[0])
-        for i, p in enumerate(ps):
-            signed_dist = np.inf
-            for a, b, c in triangles:
-                d = min(
-                    point_line_distance(p, a, b),
-                    point_line_distance(p, b, c),
-                    point_line_distance(p, c, a),
-                )
-                if point_in_triangle(p, a, b, c):
-                    d = -d
-                if abs(d) < abs(signed_dist):
-                    signed_dist = d
-            sd[i] = signed_dist
-        return sd
+    def f(p):
+        signed_dist = np.full((p.shape[0],), np.inf)
+        for a, b, c in triangles:
+            d = np.min(np.array([
+                point_line_distance(p, a, b),
+                point_line_distance(p, b, c),
+                point_line_distance(p, c, a),
+            ]), axis=0)
+            b_in = point_in_triangle(p, a, b, c)
+            d = np.where(b_in, -d, d)
+            signed_dist = np.where(np.abs(d) < np.abs(signed_dist), d, signed_dist)
+        return signed_dist
 
     return f
