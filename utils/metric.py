@@ -3,15 +3,15 @@ import numpy as np
 from scipy.spatial import cKDTree
 
 
-def evaluate_sdf_2d(model, params, sdf, min=0.0, max=1.0, resolution=1000, eps=5e-3):
+def evaluate_sdf_2d(model, params, sdf, pivot, domain_size, resolution=1000, eps=5e-3):
     """Evaluate soft chamfer distance, IoU, and MSE between the predicted and true SDF.
 
     Args:
         model (flax.linen.Module): nn architecture
         params (flax.core.FrozenDict): current model parameters
         sdf (callable): ground truth SDF
-        min (float): minimum value of the grid
-        max (float): maximum value of the grid
+        pivot (tuple): lower left corner of the sampling domain
+        domain_size (float): size of the sampling domain
         resolution (int): grid resolution
         eps (float): soft margin threshold for chamfer distance
 
@@ -24,7 +24,10 @@ def evaluate_sdf_2d(model, params, sdf, min=0.0, max=1.0, resolution=1000, eps=5
     def forward(x):
         return model.apply({'params': params}, x)[0]
 
-    X, Y = np.mgrid[min : max : (max - min) / resolution, min : max : (max - min) / resolution]
+    X, Y = np.mgrid[
+        pivot[0] : pivot[0] + domain_size : domain_size / resolution,
+        pivot[1] : pivot[1] + domain_size : domain_size / resolution,
+    ]
     coords = np.column_stack((X.ravel(), Y.ravel()))
     sdf_pred = jax.vmap(forward)(coords)
     sdf_true = sdf(coords).squeeze()

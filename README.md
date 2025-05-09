@@ -37,13 +37,13 @@ cp openvdb/openvdb/python/openvdb.* `python -c 'import site; print(site.getsitep
 Generate 2d samples from svg
 
 ```bash
-python data/gen_2d_dataset.py config/butterfly.yaml
+python gen_2d_dataset.py config/butterfly.yaml
 ```
 
 or from a pre-defined fractal shape. For instance, Von Koch snowflacks with 3 orders of recursions:
 
 ```bash
-python data/gen_2d_dataset.py config/koch.yaml
+python gen_2d_dataset.py config/koch.yaml
 ```
 
 ## Training
