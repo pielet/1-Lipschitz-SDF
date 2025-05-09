@@ -49,4 +49,9 @@ def evaluate_sdf_2d(model, params, sdf, pivot, domain_size, resolution=1000, eps
     # mse
     mse = np.mean((sdf_pred - sdf_true) ** 2)
 
-    return chamfer_dist, iou, mse
+    # eikonal
+    grad = jax.vmap(jax.grad(forward))(coords)
+    grad_norm = np.linalg.norm(grad, axis=1)
+    eikonal = np.mean(np.abs(grad_norm - 1.0))
+
+    return chamfer_dist, iou, mse, eikonal

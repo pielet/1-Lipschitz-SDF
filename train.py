@@ -2,18 +2,19 @@ import os
 
 import jax
 import optax
-from omegaconf import OmegaConf
 from flax import serialization
 from flax.training import train_state
 from jax import numpy as jnp
+from omegaconf import OmegaConf
 from torch.utils.data import DataLoader
 from tqdm import tqdm
 
 from data.dataset import SampleDataset
-from gen_2d_dataset import select_sdf, parse_config
-from models.siren import SIREN
+from gen_2d_dataset import parse_config, select_sdf
+from models.ffn import MLP, SIREN
+from models.sll import SLLNet
 from utils.logger import WandbLogger
-from utils.loss import hKR, mse
+from utils.loss import eikonal, hKR, mse
 from utils.metric import evaluate_sdf_2d
 from utils.plot import render_sdf_2d
 
@@ -47,25 +48,41 @@ def train(config, logger, output_dir):
             hidden_units=config.model.hidden_units,
         )
     elif config.model.type == 'ffn':
-        pass
-    elif config.model.type == 'ortho':
-        pass
+        model = MLP(
+            out_dim=1,
+            hidden_layers=config.model.hidden_layers,
+            hidden_units=config.model.hidden_units,
+            pe_dim=config.model.pe_dim,
+            sigma=config.model.pe_sigma,
+            trainable=config.model.pe_trainable,
+        )
     elif config.model.type == 'sll':
-        pass
+        model = SLLNet(
+            out_dim=1,
+            hidden_layers=config.model.hidden_layers,
+            hidden_units=config.model.hidden_units,
+            pe_dim=config.model.pe_dim,
+            sigma=config.model.pe_sigma,
+            trainable=config.model.pe_trainable,
+        )
     else:
         raise ValueError(f'Unknown model type: {config.model.type}')
 
-    rng = jax.random.PRNGKey(0)
+    key = jax.random.PRNGKey(0)
 
-    params = model.init(rng, jnp.zeros((1, dataset.input_dim)))['params']
+    params = model.init(key, jnp.zeros((1, dataset.input_dim)))['params']
     tx = optax.adam(learning_rate=config.learning_rate)
     ts = train_state.TrainState.create(apply_fn=model.apply, params=params, tx=tx)
 
     # loss function
-    if config.model.type == 'siren' or config.model.type == 'ffn':
+    if config.loss.type == 'mse':
         loss_fn = mse(ts.apply_fn)
-    elif config.model.type == 'ortho' or config.model.type == 'sll':
-        loss_fn = hKR(ts.apply_fn, margin=0.1, lamb=1.0, rho=lambda x, y: 1.0)
+    elif config.loss.type == 'eikonal':
+        loss_fn = eikonal(ts.apply_fn, lamb=config.loss.lamb)
+    elif config.loss.type == 'hkr':
+        loss_fn = hKR(
+            ts.apply_fn, margin=config.loss.margin, lamb=config.loss.lamb, rho=lambda x, y: 1.0
+        )
 
     @jax.jit
     def step(state, coords, field):
@@ -83,12 +100,13 @@ def train(config, logger, output_dir):
             epoch_loss += value
         if epoch % config.log_interval == 0:
             logger.log('train/loss', epoch_loss / len(dataset))
-            chamfer_dist, IoU, MSE = evaluate_sdf_2d(
-                model, ts.params, sdf, min=config.sample_min, max=config.sample_max
+            chamfer_dist, IoU, MSE, Eikonal = evaluate_sdf_2d(
+                model, ts.params, sdf, config.domain_pivot, config.domain_size
             )
             logger.log('train/chamfer_dist', chamfer_dist)
             logger.log('train/iou', IoU)
             logger.log('train/mse', MSE)
+            logger.log('train/eikonal', Eikonal)
             contour_fig, grad_fig = render_sdf_2d(
                 model, ts.params, config.domain_pivot, config.domain_size
             )
@@ -114,7 +132,7 @@ if __name__ == '__main__':
 
     timestamp = datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
     output_dir = os.path.join(
-        'output', f'{config.dataset}', f'{config.model["type"]}', timestamp
+        'output', f'{config.dataset}', f'{config.model.type}', f'{config.loss.type}', timestamp
     )
     os.makedirs(output_dir, exist_ok=True)
 

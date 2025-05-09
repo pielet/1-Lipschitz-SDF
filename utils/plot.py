@@ -33,7 +33,7 @@ def render_sdf_2d(model, params, pivot, domain_size, resolution=1000):
 
     # contours
     contour_fig, ax = plt.subplots(figsize=(8, 8))
-    pos = ax.imshow(sdf_img, cmap='RnBu', norm=sdf_norm)
+    pos = ax.imshow(sdf_img, cmap='RdBu', norm=sdf_norm)
     ax.contour(sdf_img, levels=16, colors='k', linestyles='solid', linewidths=0.3)
     ax.contour(sdf_img, levels=[0.0], colors='k', linestyles='solid', linewidths=0.6)
     contour_fig.colorbar(pos, ax=ax, fraction=0.04)
@@ -41,7 +41,7 @@ def render_sdf_2d(model, params, pivot, domain_size, resolution=1000):
 
     # gradients
     grad_fig, ax = plt.subplots(figsize=(8, 8))
-    pos = ax.imshow(grad_img, cmap='RnBu', norm=grad_norm)
+    pos = ax.imshow(grad_img, cmap='RdBu', norm=grad_norm)
     ax.contour(sdf_img, levels=[0.0], colors='k', linestyles='solid', linewidths=0.6)
     grad_fig.colorbar(pos, ax=ax, fraction=0.04)
     ax.axis('off')
