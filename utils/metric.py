@@ -3,12 +3,12 @@ import numpy as np
 from scipy.spatial import cKDTree
 
 
-def evaluate_sdf_2d(model, params, sdf, pivot, domain_size, resolution=1000, eps=5e-3):
+def evaluate_sdf_2d(model, variables, sdf, pivot, domain_size, resolution=1000, eps=5e-3):
     """Evaluate soft chamfer distance, IoU, and MSE between the predicted and true SDF.
 
     Args:
         model (flax.linen.Module): nn architecture
-        params (flax.core.FrozenDict): current model parameters
+        variables (flax.core.FrozenDict): current model parameters
         sdf (callable): ground truth SDF
         pivot (tuple): lower left corner of the sampling domain
         domain_size (float): size of the sampling domain
@@ -22,7 +22,7 @@ def evaluate_sdf_2d(model, params, sdf, pivot, domain_size, resolution=1000, eps
     """
 
     def forward(x):
-        return model.apply({'params': params}, x)[0]
+        return model.apply(variables, x)[0]
 
     X, Y = np.mgrid[
         pivot[0] : pivot[0] + domain_size : domain_size / resolution,

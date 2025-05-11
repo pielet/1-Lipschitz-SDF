@@ -27,9 +27,10 @@ class SIREN(nn.Module):
 
     @nn.compact
     def __call__(self, x):
+        _ = self.variable('constants', 'dummy', lambda: jnp.zeros((1, 1), dtype=x.dtype))
         x = SirenLayer(out_dim=self.hidden_units, omega=30.0)(
             x
-        )  # see 3.2: colver wilder frequency range to get arcsin output distribution
+        )  # see 3.2: cover wilder frequency range to get arcsin output distribution
         for _ in range(self.hidden_layers - 1):
             x = SirenLayer(self.hidden_units)(x)
         x = nn.Dense(self.out_dim, kernel_init=glorot_normal())(x)
@@ -44,13 +45,15 @@ class MLP(nn.Module):
     hidden_units: int
 
     pe_dim: int = 0
-    sigma: float = 1.0
-    trainable: bool = False
+    pe_sigma: float = 1.0
+    pe_trainable: bool = False
 
     @nn.compact
     def __call__(self, x):
         if self.pe_dim > 0:
-            x = GaussianPE(self.pe_dim, self.sigma, self.trainable)(x)
+            x = GaussianPE(self.pe_dim, self.pe_sigma, self.pe_trainable)(x)
+        else:
+            _ = self.variable('constants', 'dummy', lambda: jnp.zeros((1, 1), dtype=x.dtype))
         for _ in range(self.hidden_layers):
             x = nn.Dense(self.hidden_units)(x)
             x = nn.relu(x)

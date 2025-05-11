@@ -64,13 +64,13 @@ class SLLNet(nn.Module):
     hidden_layers: int
 
     pe_dim: int = 0
-    sigma: float = 1.0
-    trainable: bool = False
+    pe_sigma: float = 1.0
+    pe_trainable: bool = False
 
     @nn.compact
     def __call__(self, x):
         if self.pe_dim > 0:
-            x = GaussianPE(self.pe_dim, self.sigma, self.trainable)(x)
+            x = GaussianPE(self.pe_dim, self.pe_sigma, self.pe_trainable)(x)
         for _ in range(self.hidden_layers):
             x = SLL(self.hidden_units)(x)
         x = FrobeniusLinear(self.out_dim)(x)

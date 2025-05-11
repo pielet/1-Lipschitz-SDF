@@ -8,15 +8,22 @@ domain_size: 1.2
 domain_pivot: [-0.1, -0.1]
 
 # training
-epochs: 200
+epochs: 1
 batch_size: 128
 learning_rate: 0.001
-log_interval: 10
+
+model_type: siren
 model:
-  type: siren
   hidden_layers: 3
   hidden_units: 128
-  pe_dim: 128
+  pe_dim: 0
   pe_sigma: 1.0
   pe_trainable: false
+
+loss_type: eikonal
+loss:
+  lamb: 1e-2
+  margin: 0.1
+
+log_interval: 10
 save_pretrained: true

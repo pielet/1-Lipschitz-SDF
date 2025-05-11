@@ -150,11 +150,16 @@ def sierpinski_triangle(order, scale=1):
     def f(p):
         signed_dist = np.full((p.shape[0],), np.inf)
         for a, b, c in triangles:
-            d = np.min(np.array([
-                point_line_distance(p, a, b),
-                point_line_distance(p, b, c),
-                point_line_distance(p, c, a),
-            ]), axis=0)
+            d = np.min(
+                np.array(
+                    [
+                        point_line_distance(p, a, b),
+                        point_line_distance(p, b, c),
+                        point_line_distance(p, c, a),
+                    ]
+                ),
+                axis=0,
+            )
             b_in = point_in_triangle(p, a, b, c)
             d = np.where(b_in, -d, d)
             signed_dist = np.where(np.abs(d) < np.abs(signed_dist), d, signed_dist)

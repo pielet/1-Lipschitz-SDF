@@ -15,13 +15,21 @@ class GaussianPE(nn.Module):
         d = x.shape[-1]
         m = self.out_dim // 2
         if self.trainable:
-            B = self.param('B', nn.initializers.normal(stddev=self.sigma), (m, d))
+            B = self.param(
+                'B',
+                nn.initializers.truncated_normal(
+                    stddev=self.sigma, lower=-2.0 * self.sigma, upper=2.0 * self.sigma
+                ),
+                (m, d),
+            )
         else:
             B = self.variable(
                 'constants',
                 'B',
-                lambda: jax.random.normal(self.make_rng('params'), (m, d), dtype=x.dtype)
+                lambda: jax.random.truncated_normal(
+                    self.make_rng('params'), lower=-2.0, upper=2.0, shape=(m, d), dtype=x.dtype
+                )
                 * self.sigma,
             )
-        proj = jnp.dot(x, B.T)
+        proj = jnp.dot(x, B.value.T)
         return jnp.concatenate([jnp.sin(2 * jnp.pi * proj), jnp.cos(2 * jnp.pi * proj)], axis=-1)

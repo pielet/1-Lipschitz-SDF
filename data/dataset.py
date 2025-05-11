@@ -7,7 +7,8 @@ class SampleDataset(Dataset):
         data = np.load(dataset_path)
         self.coordiates = data['X']
         self.values = data['Y']
-        self.input_dim = self.coordiates.shape[1]
+        self.in_dim = self.coordiates.shape[1]
+        self.out_dim = self.values.shape[1]
 
     def __len__(self):
         return len(self.coordiates)
