@@ -4,6 +4,7 @@ import time
 import matplotlib.colors as colors
 import matplotlib.pyplot as plt
 import numpy as np
+from mpl_toolkits.axes_grid1 import make_axes_locatable
 from omegaconf import OmegaConf
 from sdf import image
 
@@ -54,14 +55,22 @@ def generate_2d_dataset_from_sdf(f, n_samples, pivot, domain_size, eps=1e-2):
 
 
 def visualize_samples(X, Y, pivot, domain_size):
-    fig, ax = plt.subplots(figsize=(8, 7))
+    fig, ax = plt.subplots(figsize=(8, 8))
     print(f'Sample min: {np.min(Y)}, max: {np.max(Y)}')
     norm = colors.TwoSlopeNorm(vmin=np.min(Y), vmax=np.max(Y), vcenter=0)
     im = ax.scatter(X[:, 0], X[:, 1], c=Y, cmap='RdBu', norm=norm, s=0.1)
     ax.set_xlim(pivot[0], pivot[0] + domain_size)
     ax.set_ylim(pivot[1], pivot[1] + domain_size)
     ax.set_aspect('equal', adjustable='box')
-    plt.colorbar(im, ax=ax, fraction=0.04)
+    divider = make_axes_locatable(ax)
+    cax = divider.append_axes('right', size='5%', pad=0.1)
+    plt.colorbar(
+        im,
+        ax=ax,
+        cax=cax,
+        ticks=np.stack([np.linspace(np.min(Y), 0, 4), np.linspace(0, np.max(Y), 4)]).flatten(),
+        format='%.2f',
+    )
     return fig
 
 

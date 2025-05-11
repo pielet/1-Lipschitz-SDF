@@ -2,6 +2,7 @@ import jax
 import matplotlib.colors as colors
 import matplotlib.pyplot as plt
 import numpy as np
+from mpl_toolkits.axes_grid1 import make_axes_locatable
 
 
 def render_sdf_2d(model, variables, pivot, domain_size, resolution=1000):
@@ -37,14 +38,32 @@ def render_sdf_2d(model, variables, pivot, domain_size, resolution=1000):
     pos = ax.imshow(sdf_img, cmap='RdBu', norm=sdf_norm)
     ax.contour(sdf_img, levels=16, colors='k', linestyles='solid', linewidths=0.3)
     ax.contour(sdf_img, levels=[0.0], colors='k', linestyles='solid', linewidths=0.6)
-    contour_fig.colorbar(pos, ax=ax, fraction=0.04)
+    divider = make_axes_locatable(ax)
+    cax = divider.append_axes('right', size='5%', pad=0.1)
+    contour_fig.colorbar(
+        pos,
+        ax=ax,
+        cax=cax,
+        ticks=np.stack([np.linspace(np.min(sdf), 0, 4), np.linspace(0, np.max(sdf), 4)]).flatten(),
+        format='%.2f',
+    )
     ax.axis('off')
 
     # gradients
     grad_fig, ax = plt.subplots(figsize=(8, 8))
     pos = ax.imshow(grad_img, cmap='RdBu', norm=grad_norm)
     ax.contour(sdf_img, levels=[0.0], colors='k', linestyles='solid', linewidths=0.6)
-    grad_fig.colorbar(pos, ax=ax, fraction=0.04)
+    divider = make_axes_locatable(ax)
+    cax = divider.append_axes('right', size='5%', pad=0.1)
+    grad_fig.colorbar(
+        pos,
+        ax=ax,
+        cax=cax,
+        ticks=np.stack(
+            [np.linspace(np.min(grad_img), 0, 4), np.linspace(0, np.max(grad_img), 4)]
+        ).flatten(),
+        format='%.2f',
+    )
     ax.axis('off')
 
     return contour_fig, grad_fig
@@ -64,8 +83,8 @@ def render_ground_truth_2d(f, pivot, domain_size, resolution=1000):
     """
 
     X, Y = np.mgrid[
-        pivot[0] : pivot[0] + domain_size : domain_size / resolution,
-        pivot[1] : pivot[1] + domain_size : domain_size / resolution,
+        pivot[0] : pivot[0] + domain_size : (domain_size) / resolution,
+        pivot[1] : pivot[1] + domain_size : (domain_size) / resolution,
     ]
     coords = np.column_stack((X.ravel(), Y.ravel()))
     sdf = f(coords)
@@ -79,7 +98,15 @@ def render_ground_truth_2d(f, pivot, domain_size, resolution=1000):
     pos = ax.imshow(sdf_img, cmap='RdBu', norm=sdf_norm)
     ax.contour(sdf_img, levels=16, colors='k', linestyles='solid', linewidths=0.3)
     ax.contour(sdf_img, levels=[0.0], colors='k', linestyles='solid', linewidths=0.6)
-    contour_fig.colorbar(pos, ax=ax, fraction=0.04)
+    divider = make_axes_locatable(ax)
+    cax = divider.append_axes('right', size='5%', pad=0.1)
+    contour_fig.colorbar(
+        pos,
+        ax=ax,
+        cax=cax,
+        ticks=np.stack([np.linspace(np.min(sdf), 0, 4), np.linspace(0, np.max(sdf), 4)]).flatten(),
+        format='%.2f',
+    )
     ax.axis('off')
 
     return contour_fig
