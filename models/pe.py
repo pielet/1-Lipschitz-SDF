@@ -33,3 +33,13 @@ class GaussianPE(nn.Module):
             )
         proj = jnp.dot(x, B.value.T)
         return jnp.concatenate([jnp.sin(2 * jnp.pi * proj), jnp.cos(2 * jnp.pi * proj)], axis=-1)
+
+
+def FourierPE(out_dim, x):
+    d = x.shape[-1]
+    m = out_dim // d // 2
+    proj = x[..., None] * 2 ** jnp.arange(m) * jnp.pi
+    emb = jnp.concatenate([jnp.sin(proj), jnp.cos(proj)], axis=-1).reshape(x.shape[0], -1)
+    return emb
+
+        

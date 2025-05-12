@@ -15,12 +15,12 @@ def mse(apply_fn, constants):
 def eikonal(apply_fn, constants, lamb):
     def loss_fn(params, x, y):
         def forward(x):
+            x = x.reshape(-1, x.shape[-1])  # [batch_size, in_dim]
             return apply_fn({"params": params, "constants": constants}, x).squeeze()
 
-        y_pred = apply_fn({"params": params, "constants": constants}, x)
-        grad = jax.vmap(jax.grad(forward))(x)
+        y_pred, grad = jax.vmap(jax.value_and_grad(forward))(x)
         grad_norm = jnp.linalg.norm(grad, axis=1, keepdims=True)
-        loss = optax.l2_loss(y_pred, y) + lamb * optax.l2_loss(
+        loss = optax.l2_loss(y_pred.reshape(-1, y.shape[-1]), y) + lamb * optax.l2_loss(
             grad_norm, jnp.full_like(grad_norm, 1.0)
         )
         return loss.sum()  # batch loss

@@ -63,7 +63,7 @@ def train(config, logger, output_dir):
     eval_coords = np.column_stack((X.ravel(), Y.ravel()))
     sdf_true = sdf(eval_coords).squeeze()
     eval_dataset = TensorDataset(torch.Tensor(eval_coords))
-    eval_dataloader = DataLoader(eval_dataset, batch_size=100*config.batch_size, shuffle=False)
+    eval_dataloader = DataLoader(eval_dataset, batch_size=config.batch_size, shuffle=False)
 
     # initialize model
     models = {'siren': SIREN, 'ffn': MLP, 'sll': SLLNet}
@@ -99,19 +99,12 @@ def train(config, logger, output_dir):
             rho=lambda x, y: 1.0,
         )
 
-    def evaluate(state, dataloader):
-        """Evaluate the model and ground truth on a grid of points in the domain in minibatchs."""
+    @jax.jit
+    def evaluate(state, coords):
         def forward(coords):
+            coords = coords.reshape(-1, coords.shape[-1])  # [1, in_dim]
             return state.apply_fn({'params': state.params, 'constants': constants}, coords).squeeze()
-        sdf_pred = []
-        grad_pred = []
-        for coords_batch in dataloader:
-            sdf_batch, grad_batch = jax.vmap(jax.value_and_grad(forward))(coords_batch[0].numpy())
-            sdf_pred.append(sdf_batch)
-            grad_pred.append(grad_batch)
-        sdf_pred = np.concatenate(sdf_pred)
-        grad_pred = np.concatenate(grad_pred, axis=0)
-        return sdf_pred, grad_pred
+        return jax.vmap(jax.value_and_grad(forward))(coords)
 
     @jax.jit
     def step(state, coords, field):
@@ -128,9 +121,16 @@ def train(config, logger, output_dir):
             value, ts = step(ts, coords.numpy(), field.numpy())
             epoch_loss += value
         logger.log('train/loss', epoch_loss / len(train_dataset))
+        
         if epoch % config.evaluation.interval == 0:
-            logger.log('train/loss', epoch_loss / len(train_dataset))
-            sdf_pred, grad_pred = evaluate(ts, eval_dataloader)
+            sdf_pred, grad_pred = [], []
+            for batch in eval_dataloader:
+                sdf_batch, grad_batch = evaluate(ts, batch[0].numpy())
+                sdf_pred.append(sdf_batch)
+                grad_pred.append(grad_batch)
+            sdf_pred = np.concatenate(sdf_pred)
+            grad_pred = np.concatenate(grad_pred, axis=0)
+            
             chamfer_dist, IoU, MSE, Eikonal = evaluate_sdf_2d(
                 eval_coords, sdf_pred, sdf_true, grad_pred
             )
@@ -138,9 +138,11 @@ def train(config, logger, output_dir):
             logger.log('train/iou', IoU)
             logger.log('train/mse', MSE)
             logger.log('train/eikonal', Eikonal)
+
             contour_fig, grad_fig = render_sdf_2d(sdf_pred, grad_pred, config.evaluation.resolution)
             logger.log_image('contour', contour_fig, 'level-set contour')
             logger.log_image('grad', grad_fig, 'gradient magnitude')
+
         loop.set_description(f'Loss: {epoch_loss / len(train_dataset):.8f}')
         loop.update()
 

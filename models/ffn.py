@@ -2,7 +2,7 @@ import jax.numpy as jnp
 from flax import linen as nn
 from jax.nn.initializers import glorot_normal, normal
 
-from models.pe import GaussianPE
+from models.pe import GaussianPE, FourierPE
 
 
 class SirenLayer(nn.Module):
@@ -51,6 +51,8 @@ class MLP(nn.Module):
     @nn.compact
     def __call__(self, x):
         if self.pe_dim > 0:
+            # x = FourierPE(self.pe_dim, x)
+            # _ = self.variable('constants', 'dummy', lambda: jnp.zeros((1, 1), dtype=x.dtype))
             x = GaussianPE(self.pe_dim, self.pe_sigma, self.pe_trainable)(x)
         else:
             _ = self.variable('constants', 'dummy', lambda: jnp.zeros((1, 1), dtype=x.dtype))
