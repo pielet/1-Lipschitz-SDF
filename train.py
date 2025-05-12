@@ -116,7 +116,7 @@ def train(config, logger, output_dir):
             )
             logger.log_image('contour', contour_fig, 'level-set contour')
             logger.log_image('grad', grad_fig, 'gradient magnitude')
-        loop.set_description(f'Loss: {epoch_loss / len(dataset):.4f}')
+        loop.set_description(f'Loss: {epoch_loss / len(dataset):.8f}')
         loop.update()
 
     # save model

@@ -5,6 +5,15 @@ import numpy as np
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 
 
+def colorbar_params(field, center, n_ticks=4):
+    fmin, fmax = np.min(field), np.max(field)
+    norm = colors.TwoSlopeNorm(vmin=fmin, vmax=fmax, vcenter=center)
+    ticks = np.stack(
+        [np.linspace(fmin, center, n_ticks), np.linspace(center, fmax, n_ticks)]
+    ).flatten()
+    return norm, ticks
+
+
 def render_sdf_2d(model, variables, pivot, domain_size, resolution=1000):
     """Renders the 2D signed distance function (SDF) contour and gradient of a given model.
 
@@ -27,43 +36,29 @@ def render_sdf_2d(model, variables, pivot, domain_size, resolution=1000):
     sdf, grads = jax.vmap(jax.value_and_grad(forward))(coords)
 
     sdf_img = sdf.reshape(resolution, resolution)[:, ::-1].T
-    sdf_norm = colors.TwoSlopeNorm(vmin=np.min(sdf), vmax=np.max(sdf), vcenter=0)
     grad_img = np.linalg.norm(grads, axis=1).reshape(resolution, resolution)[:, ::-1].T
-    grad_norm = colors.TwoSlopeNorm(vmin=np.min(grad_img), vmax=np.max(grad_img), vcenter=1.0)
     print(f'SDF min: {np.min(sdf)}, max: {np.max(sdf)}')
     print(f'|∇f| min: {np.min(grad_img)}, max: {np.max(grad_img)}')
 
     # contours
     contour_fig, ax = plt.subplots(figsize=(8, 8))
-    pos = ax.imshow(sdf_img, cmap='RdBu', norm=sdf_norm)
+    norm, ticks = colorbar_params(sdf, 0.0)
+    pos = ax.imshow(sdf_img, cmap='RdBu', norm=norm)
     ax.contour(sdf_img, levels=16, colors='k', linestyles='solid', linewidths=0.3)
     ax.contour(sdf_img, levels=[0.0], colors='k', linestyles='solid', linewidths=0.6)
     divider = make_axes_locatable(ax)
     cax = divider.append_axes('right', size='5%', pad=0.1)
-    contour_fig.colorbar(
-        pos,
-        ax=ax,
-        cax=cax,
-        ticks=np.stack([np.linspace(np.min(sdf), 0, 4), np.linspace(0, np.max(sdf), 4)]).flatten(),
-        format='%.2f',
-    )
+    contour_fig.colorbar(pos, ax=ax, cax=cax, ticks=ticks, format='%.2f')
     ax.axis('off')
 
     # gradients
     grad_fig, ax = plt.subplots(figsize=(8, 8))
-    pos = ax.imshow(grad_img, cmap='RdBu', norm=grad_norm)
+    norm, ticks = colorbar_params(grad_img, 1.0)
+    pos = ax.imshow(grad_img, cmap='RdBu', norm=norm)
     ax.contour(sdf_img, levels=[0.0], colors='k', linestyles='solid', linewidths=0.6)
     divider = make_axes_locatable(ax)
     cax = divider.append_axes('right', size='5%', pad=0.1)
-    grad_fig.colorbar(
-        pos,
-        ax=ax,
-        cax=cax,
-        ticks=np.stack(
-            [np.linspace(np.min(grad_img), 0, 4), np.linspace(0, np.max(grad_img), 4)]
-        ).flatten(),
-        format='%.2f',
-    )
+    grad_fig.colorbar(pos, ax=ax, cax=cax, ticks=ticks, format='%.2f',)
     ax.axis('off')
 
     return contour_fig, grad_fig
