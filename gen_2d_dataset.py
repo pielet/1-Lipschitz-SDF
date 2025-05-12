@@ -47,6 +47,8 @@ def select_sdf(cfg):
 
 @timing
 def generate_2d_dataset_from_sdf(f, n_samples, pivot, domain_size, eps=1e-2):
+    # eps here is to avoid sampling on boundary, which has large vaule for image sdf
+    # TODO: fix this
     X = np.random.uniform(pivot[0] + eps, pivot[0] + domain_size - eps, n_samples)
     Y = np.random.uniform(pivot[1] + eps, pivot[1] + domain_size - eps, n_samples)
     coords = np.stack((X, Y)).T

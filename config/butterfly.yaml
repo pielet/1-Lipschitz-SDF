@@ -11,7 +11,7 @@ epochs: 100
 batch_size: 128
 learning_rate: 0.001
 
-model_type: ffn
+model_type: siren
 model:
   hidden_layers: 3
   hidden_units: 128
@@ -24,5 +24,9 @@ loss:
   lamb: 1e-2
   margin: 0.1
 
-log_interval: 10
+evaluation:
+  interval: 10
+  resolution: 1000
+
 save_pretrained: true
+resume: false

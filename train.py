@@ -1,17 +1,21 @@
 import inspect
 import os
+
+# os.environ['XLA_FLAGS'] = '--xla_gpu_autotune_level=0'  # disable autotune warnings
+
 from functools import partial
 
 import jax
 import optax
+import numpy as np
 from flax import serialization
 from flax.training import train_state
 from jax import numpy as jnp
 from omegaconf import OmegaConf
-from torch.utils.data import DataLoader
+import torch
+from torch.utils.data import TensorDataset, DataLoader
 from tqdm import tqdm
 
-from data.dataset import SampleDataset
 from gen_2d_dataset import parse_config, select_sdf
 from models.ffn import MLP, SIREN
 from models.sll import SLLNet
@@ -42,19 +46,33 @@ def safe_call(func, args):
 
 def train(config, logger, output_dir):
     # load dataset
-    dataset = SampleDataset(f'input/{config.dataset}.npz')
-    print(f'Loaded {len(dataset)} samples from {config.dataset}')
-    dataloader = DataLoader(dataset, batch_size=config.batch_size, shuffle=True)
+    data = np.load(f'input/{config.dataset}.npz')
+    coordiates, values = data['X'], data['Y']
+    train_dataset = TensorDataset(torch.Tensor(coordiates), torch.Tensor(values))
+    print(f'Loaded {len(train_dataset)} samples from {config.dataset}')
+    train_dataloader = DataLoader(train_dataset, batch_size=config.batch_size, shuffle=True)
     sdf = select_sdf(config)
+
+    # evaluation
+    X, Y = np.mgrid[
+        config.domain_pivot[0] : config.domain_pivot[0] + config.domain_size : config.domain_size
+        / config.evaluation.resolution,
+        config.domain_pivot[1] : config.domain_pivot[1] + config.domain_size : config.domain_size
+        / config.evaluation.resolution,
+    ]
+    eval_coords = np.column_stack((X.ravel(), Y.ravel()))
+    sdf_true = sdf(eval_coords).squeeze()
+    eval_dataset = TensorDataset(torch.Tensor(eval_coords))
+    eval_dataloader = DataLoader(eval_dataset, batch_size=100*config.batch_size, shuffle=False)
 
     # initialize model
     models = {'siren': SIREN, 'ffn': MLP, 'sll': SLLNet}
-    model = safe_call(partial(models.get(config.model_type), out_dim=dataset.out_dim), config.model)
+    model = safe_call(partial(models.get(config.model_type), out_dim=values.shape[1]), config.model)
 
     key = jax.random.PRNGKey(0)
-
-    variables = model.init(key, jnp.zeros((1, dataset.in_dim)), mutable=['params', 'constants'])
+    variables = model.init(key, jnp.zeros((1, coordiates.shape[1])), mutable=['params', 'constants'])
     constants = variables['constants']
+    # print(jax.tree_map(lambda x: x.dtype, variables['params']))
     tx = optax.adam(learning_rate=config.learning_rate)
     ts = train_state.TrainState.create(apply_fn=model.apply, params=variables['params'], tx=tx)
 
@@ -81,6 +99,20 @@ def train(config, logger, output_dir):
             rho=lambda x, y: 1.0,
         )
 
+    def evaluate(state, dataloader):
+        """Evaluate the model and ground truth on a grid of points in the domain in minibatchs."""
+        def forward(coords):
+            return state.apply_fn({'params': state.params, 'constants': constants}, coords).squeeze()
+        sdf_pred = []
+        grad_pred = []
+        for coords_batch in dataloader:
+            sdf_batch, grad_batch = jax.vmap(jax.value_and_grad(forward))(coords_batch[0].numpy())
+            sdf_pred.append(sdf_batch)
+            grad_pred.append(grad_batch)
+        sdf_pred = np.concatenate(sdf_pred)
+        grad_pred = np.concatenate(grad_pred, axis=0)
+        return sdf_pred, grad_pred
+
     @jax.jit
     def step(state, coords, field):
         value, grads = jax.value_and_grad(loss_fn)(state.params, coords, field)
@@ -91,32 +123,25 @@ def train(config, logger, output_dir):
     loop = tqdm(range(config.epochs))
     for epoch in loop:
         epoch_loss = 0.0
-        for batch in dataloader:
+        for batch in train_dataloader:
             coords, field = batch
             value, ts = step(ts, coords.numpy(), field.numpy())
             epoch_loss += value
-        if epoch % config.log_interval == 0:
-            logger.log('train/loss', epoch_loss / len(dataset))
+        logger.log('train/loss', epoch_loss / len(train_dataset))
+        if epoch % config.evaluation.interval == 0:
+            logger.log('train/loss', epoch_loss / len(train_dataset))
+            sdf_pred, grad_pred = evaluate(ts, eval_dataloader)
             chamfer_dist, IoU, MSE, Eikonal = evaluate_sdf_2d(
-                model,
-                {'params': ts.params, 'constants': constants},
-                sdf,
-                config.domain_pivot,
-                config.domain_size,
+                eval_coords, sdf_pred, sdf_true, grad_pred
             )
             logger.log('train/chamfer_dist', chamfer_dist)
             logger.log('train/iou', IoU)
             logger.log('train/mse', MSE)
             logger.log('train/eikonal', Eikonal)
-            contour_fig, grad_fig = render_sdf_2d(
-                model,
-                {'params': ts.params, 'constants': constants},
-                config.domain_pivot,
-                config.domain_size,
-            )
+            contour_fig, grad_fig = render_sdf_2d(sdf_pred, grad_pred, config.evaluation.resolution)
             logger.log_image('contour', contour_fig, 'level-set contour')
             logger.log_image('grad', grad_fig, 'gradient magnitude')
-        loop.set_description(f'Loss: {epoch_loss / len(dataset):.8f}')
+        loop.set_description(f'Loss: {epoch_loss / len(train_dataset):.8f}')
         loop.update()
 
     # save model

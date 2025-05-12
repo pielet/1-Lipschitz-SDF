@@ -25,5 +25,9 @@ loss:
   lamb: 1e-2
   margin: 0.1
 
-log_interval: 10
+evaluation:
+  interval: 10
+  resolution: 1000
+
 save_pretrained: true
+resume: false
