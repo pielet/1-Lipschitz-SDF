@@ -8,8 +8,7 @@ from functools import partial
 import jax
 import optax
 import numpy as np
-from flax import serialization
-from flax.training import train_state
+from flax.training import train_state, checkpoints
 from jax import numpy as jnp
 from omegaconf import OmegaConf
 import torch
@@ -25,17 +24,12 @@ from utils.metric import evaluate_sdf_2d
 from utils.plot import render_sdf_2d
 
 
-def save_pretrained(params, path):
-    with open(path, 'wb') as f:
-        f.write(serialization.to_bytes(params))
+def save_pretrained(state, path):
+    checkpoints.save_checkpoint(ckpt_dir=os.path.abspath(path), target=state.params, step=state.step, overwrite=True)
 
 
-def load_pretrained(model, path, dummy_input):
-    with open(path, 'rb') as f:
-        bytes_data = f.read()
-    template_params = model.init(jax.random.PRNGKey(0), dummy_input)['params']
-    params = serialization.from_bytes(template_params, bytes_data)
-    return params
+def load_pretrained(state, path):
+    checkpoints.restore_checkpoint(ckpt_dir=os.path.abspath(path), target=state.params)
 
 
 def safe_call(func, args):
@@ -44,8 +38,8 @@ def safe_call(func, args):
     return func(**{k: v for k, v in args.items() if k in valid_keys})
 
 
-def train(config, logger, output_dir):
-    # load dataset
+def train(config, logger, ckpt_dir):
+    # load training dataset
     data = np.load(f'input/{config.dataset}.npz')
     coordiates, values = data['X'], data['Y']
     train_dataset = TensorDataset(torch.Tensor(coordiates), torch.Tensor(values))
@@ -53,7 +47,7 @@ def train(config, logger, output_dir):
     train_dataloader = DataLoader(train_dataset, batch_size=config.batch_size, shuffle=True)
     sdf = select_sdf(config)
 
-    # evaluation
+    # evaluation dataset
     X, Y = np.mgrid[
         config.domain_pivot[0] : config.domain_pivot[0] + config.domain_size : config.domain_size
         / config.evaluation.resolution,
@@ -111,6 +105,11 @@ def train(config, logger, output_dir):
         value, grads = jax.value_and_grad(loss_fn)(state.params, coords, field)
         state = state.apply_gradients(grads=grads)
         return value, state
+    
+    # load pretrained model
+    if config.load_pretrained:
+        load_pretrained(ts, ckpt_dir)
+        print('Model loaded')
 
     # training loop
     loop = tqdm(range(config.epochs))
@@ -148,23 +147,20 @@ def train(config, logger, output_dir):
 
     # save model
     if config.save_pretrained:
-        save_pretrained(ts.params, os.path.join(output_dir, 'model_final.msgpack'))
-        print(f'Model saved to {os.path.join(output_dir, "model_final.msgpack")}')
+        save_pretrained(ts, ckpt_dir)
+        print(f'Model saved to {ckpt_dir}')
 
     logger.finish()
 
 
 if __name__ == '__main__':
-    import datetime
     import sys
 
     config = parse_config(sys.argv[1])
     logger = WandbLogger(project='1-lip-sdf', config=OmegaConf.to_container(config, resolve=True))
+    ckpt_dir = os.path.join(
+                'output', f'{config.dataset}', f'{config.model_type}', f'{config.loss_type}'
+            )
+    os.makedirs(ckpt_dir, exist_ok=True)
 
-    timestamp = datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
-    output_dir = os.path.join(
-        'output', f'{config.dataset}', f'{config.model_type}', f'{config.loss_type}', timestamp
-    )
-    os.makedirs(output_dir, exist_ok=True)
-
-    train(config, logger, output_dir)
+    train(config, logger, ckpt_dir)
