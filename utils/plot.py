@@ -4,9 +4,9 @@ import numpy as np
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 
 
-def colorbar_params(field, center, n_ticks=4):
+def colorbar_params(field, center, n_ticks=4, eps=1e-4):
     fmin, fmax = np.min(field), np.max(field)
-    norm = colors.TwoSlopeNorm(vmin=fmin, vmax=fmax, vcenter=center)
+    norm = colors.TwoSlopeNorm(vmin=min(fmin, center-eps), vmax=max(fmax, center+eps), vcenter=center)
     ticks = np.stack(
         [np.linspace(fmin, center, n_ticks), np.linspace(center, fmax, n_ticks)]
     ).flatten()

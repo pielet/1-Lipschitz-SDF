@@ -50,12 +50,10 @@ class MLP(nn.Module):
 
     @nn.compact
     def __call__(self, x):
+        _ = self.variable('constants', 'dummy', lambda: jnp.zeros((1, 1), dtype=x.dtype))
         if self.pe_dim > 0:
             # x = FourierPE(self.pe_dim, x)
-            # _ = self.variable('constants', 'dummy', lambda: jnp.zeros((1, 1), dtype=x.dtype))
             x = GaussianPE(self.pe_dim, self.pe_sigma, self.pe_trainable)(x)
-        else:
-            _ = self.variable('constants', 'dummy', lambda: jnp.zeros((1, 1), dtype=x.dtype))
         for _ in range(self.hidden_layers):
             x = nn.Dense(self.hidden_units)(x)
             x = nn.relu(x)

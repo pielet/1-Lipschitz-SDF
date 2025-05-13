@@ -30,8 +30,8 @@ class GaussianPE(nn.Module):
                     self.make_rng('params'), lower=-2.0, upper=2.0, shape=(m, d), dtype=x.dtype
                 )
                 * self.sigma,
-            )
-        proj = jnp.dot(x, B.value.T)
+            ).value
+        proj = jnp.dot(x, B.T)
         return jnp.concatenate([jnp.sin(2 * jnp.pi * proj), jnp.cos(2 * jnp.pi * proj)], axis=-1)
 
 

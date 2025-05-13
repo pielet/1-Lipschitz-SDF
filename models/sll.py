@@ -1,6 +1,6 @@
 import jax.numpy as jnp
 from flax import linen as nn
-from jax.nn.initializers import lecun_normal, normal, zeros
+from flax.linen.initializers import normal, lecun_normal, zeros_init
 
 from models.pe import GaussianPE
 
@@ -17,7 +17,7 @@ class FrobeniusLinear(nn.Module):
     @nn.compact
     def __call__(self, x):
         weight = self.param('weight', lecun_normal(), (self.out_dim, x.shape[-1]))
-        bias = self.param('bias', zeros(), (1, self.out_dim))
+        bias = self.param('bias', zeros_init(), (1, self.out_dim))
 
         if self.b_disjoint:
             weight /= jnp.linalg.norm(weight, axis=1, keepdims=True)
@@ -28,7 +28,7 @@ class FrobeniusLinear(nn.Module):
         return out
 
 
-class SLL(nn.Module):
+class SLLLayer(nn.Module):
     """SDP-based Lipschitz Layer. See https://arxiv.org/pdf/2303.03169 Equation 8."""
 
     hidden_units: int
@@ -37,7 +37,7 @@ class SLL(nn.Module):
     def __call__(self, x):
         # parameters
         weight = self.param('weight', lecun_normal(), (self.hidden_units, x.shape[-1]))
-        bias = self.param('bias', zeros(), (1, self.hidden_units))
+        bias = self.param('bias', zeros_init(), (1, self.hidden_units))
         q_raw = self.param('q', normal(), (self.hidden_units,))
 
         # compute t
@@ -69,9 +69,10 @@ class SLLNet(nn.Module):
 
     @nn.compact
     def __call__(self, x):
+        _ = self.variable('constants', 'dummy', lambda: jnp.zeros((1, 1), dtype=x.dtype))
         if self.pe_dim > 0:
             x = GaussianPE(self.pe_dim, self.pe_sigma, self.pe_trainable)(x)
         for _ in range(self.hidden_layers):
-            x = SLL(self.hidden_units)(x)
+            x = SLLLayer(self.hidden_units)(x)
         x = FrobeniusLinear(self.out_dim)(x)
         return x
