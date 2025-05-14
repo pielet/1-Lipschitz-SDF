@@ -16,7 +16,7 @@ class WandbLogger:
 
     def log_image(self, name, fig, caption):
         buf = BytesIO()
-        fig.savefig(buf, format="png", bbox_inches="tight", pad_inches=0.05)
+        fig.savefig(buf, format='png', bbox_inches='tight', pad_inches=0.05)
         image = Image.open(buf)
         self.wandb.log({name: self.wandb.Image(image, caption=caption)})
         plt.close(fig)

@@ -1,8 +1,7 @@
+from typing import Callable
 import jax.numpy as jnp
 from flax import linen as nn
 from jax.nn.initializers import glorot_normal, normal
-
-from models.pe import GaussianPE, FourierPE
 
 
 class SirenLayer(nn.Module):
@@ -24,10 +23,12 @@ class SIREN(nn.Module):
     out_dim: int
     hidden_layers: int
     hidden_units: int
+    pos_enc: Callable | None
 
     @nn.compact
     def __call__(self, x):
         _ = self.variable('constants', 'dummy', lambda: jnp.zeros((1, 1), dtype=x.dtype))
+        x = self.pos_enc(x) if self.pos_enc is not None else x
         x = SirenLayer(out_dim=self.hidden_units, omega=30.0)(
             x
         )  # see 3.2: cover wilder frequency range to get arcsin output distribution
@@ -43,17 +44,12 @@ class MLP(nn.Module):
     out_dim: int
     hidden_layers: int
     hidden_units: int
-
-    pe_dim: int = 0
-    pe_sigma: float = 1.0
-    pe_trainable: bool = False
+    pos_enc: Callable | None
 
     @nn.compact
     def __call__(self, x):
         _ = self.variable('constants', 'dummy', lambda: jnp.zeros((1, 1), dtype=x.dtype))
-        if self.pe_dim > 0:
-            # x = FourierPE(self.pe_dim, x)
-            x = GaussianPE(self.pe_dim, self.pe_sigma, self.pe_trainable)(x)
+        x = self.pos_enc(x) if self.pos_enc is not None else x
         for _ in range(self.hidden_layers):
             x = nn.Dense(self.hidden_units)(x)
             x = nn.relu(x)

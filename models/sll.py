@@ -1,8 +1,7 @@
+from typing import Callable
 import jax.numpy as jnp
 from flax import linen as nn
 from flax.linen.initializers import normal, lecun_normal, zeros_init
-
-from models.pe import GaussianPE
 
 
 def safe_inv(x, eps=1e-6):
@@ -28,7 +27,7 @@ class FrobeniusLinear(nn.Module):
         return out
 
 
-class SLLLayer(nn.Module):
+class SLL(nn.Module):
     """SDP-based Lipschitz Layer. See https://arxiv.org/pdf/2303.03169 Equation 8."""
 
     hidden_units: int
@@ -62,17 +61,13 @@ class SLLNet(nn.Module):
     out_dim: int
     hidden_units: int
     hidden_layers: int
-
-    pe_dim: int = 0
-    pe_sigma: float = 1.0
-    pe_trainable: bool = False
+    pos_enc: Callable | None
 
     @nn.compact
     def __call__(self, x):
         _ = self.variable('constants', 'dummy', lambda: jnp.zeros((1, 1), dtype=x.dtype))
-        if self.pe_dim > 0:
-            x = GaussianPE(self.pe_dim, self.pe_sigma, self.pe_trainable)(x)
+        x = self.pos_enc(x) if self.pos_enc is not None else x
         for _ in range(self.hidden_layers):
-            x = SLLLayer(self.hidden_units)(x)
+            x = SLL(self.hidden_units)(x)
         x = FrobeniusLinear(self.out_dim)(x)
         return x

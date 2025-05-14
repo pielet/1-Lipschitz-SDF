@@ -6,7 +6,9 @@ from mpl_toolkits.axes_grid1 import make_axes_locatable
 
 def colorbar_params(field, center, n_ticks=4, eps=1e-4):
     fmin, fmax = np.min(field), np.max(field)
-    norm = colors.TwoSlopeNorm(vmin=min(fmin, center-eps), vmax=max(fmax, center+eps), vcenter=center)
+    norm = colors.TwoSlopeNorm(
+        vmin=min(fmin, center - eps), vmax=max(fmax, center + eps), vcenter=center
+    )
     ticks = np.stack(
         [np.linspace(fmin, center, n_ticks), np.linspace(center, fmax, n_ticks)]
     ).flatten()
@@ -27,32 +29,30 @@ def render_sdf_2d(sdf_pred, grad_pred, resolution=100):
     """
 
     sdf_img = sdf_pred.reshape(resolution, resolution)[:, ::-1].T
-    grad_img = (
-        np.linalg.norm(grad_pred, axis=1).reshape(resolution, resolution)[:, ::-1].T
-    )
-    print(f"SDF min: {np.min(sdf_pred)}, max: {np.max(sdf_pred)}")
-    print(f"|∇f| min: {np.min(grad_img)}, max: {np.max(grad_img)}")
+    grad_img = np.linalg.norm(grad_pred, axis=1).reshape(resolution, resolution)[:, ::-1].T
+    print(f'SDF min: {np.min(sdf_pred)}, max: {np.max(sdf_pred)}')
+    print(f'|∇f| min: {np.min(grad_img)}, max: {np.max(grad_img)}')
 
     # contours
     contour_fig, ax = plt.subplots(figsize=(8, 8))
     sdf_norm, sdf_ticks = colorbar_params(sdf_pred, 0.0)
-    pos = ax.imshow(sdf_img, cmap="RdBu", norm=sdf_norm)
-    ax.contour(sdf_img, levels=16, colors="k", linestyles="solid", linewidths=0.3)
-    ax.contour(sdf_img, levels=[0.0], colors="k", linestyles="solid", linewidths=0.6)
+    pos = ax.imshow(sdf_img, cmap='RdBu', norm=sdf_norm)
+    ax.contour(sdf_img, levels=16, colors='k', linestyles='solid', linewidths=0.3)
+    ax.contour(sdf_img, levels=[0.0], colors='k', linestyles='solid', linewidths=0.6)
     divider = make_axes_locatable(ax)
-    cax = divider.append_axes("right", size="5%", pad=0.1)
-    contour_fig.colorbar(pos, ax=ax, cax=cax, ticks=sdf_ticks, format="%.2f")
-    ax.axis("off")
+    cax = divider.append_axes('right', size='5%', pad=0.1)
+    contour_fig.colorbar(pos, ax=ax, cax=cax, ticks=sdf_ticks, format='%.2f')
+    ax.axis('off')
 
     # gradients
     grad_fig, ax = plt.subplots(figsize=(8, 8))
     grad_norm, grad_ticks = colorbar_params(grad_img, 1.0)
-    pos = ax.imshow(grad_img, cmap="RdBu", norm=grad_norm)
-    ax.contour(sdf_img, levels=[0.0], colors="k", linestyles="solid", linewidths=0.6)
+    pos = ax.imshow(grad_img, cmap='RdBu', norm=grad_norm)
+    ax.contour(sdf_img, levels=[0.0], colors='k', linestyles='solid', linewidths=0.6)
     divider = make_axes_locatable(ax)
-    cax = divider.append_axes("right", size="5%", pad=0.1)
-    grad_fig.colorbar(pos, ax=ax, cax=cax, ticks=grad_ticks, format="%.2f")
-    ax.axis("off")
+    cax = divider.append_axes('right', size='5%', pad=0.1)
+    grad_fig.colorbar(pos, ax=ax, cax=cax, ticks=grad_ticks, format='%.2f')
+    ax.axis('off')
 
     return contour_fig, grad_fig
 
@@ -76,19 +76,19 @@ def render_ground_truth_2d(f, pivot, domain_size, resolution=1000):
     ]
     coords = np.column_stack((X.ravel(), Y.ravel()))
     sdf = f(coords)
-    print(f"SDF min: {np.min(sdf)}, max: {np.max(sdf)}")
+    print(f'SDF min: {np.min(sdf)}, max: {np.max(sdf)}')
 
     sdf_img = sdf.reshape(resolution, resolution)[:, ::-1].T
     sdf_norm, sdf_ticks = colorbar_params(sdf, 0.0)
 
     # contours
     contour_fig, ax = plt.subplots(figsize=(8, 8))
-    pos = ax.imshow(sdf_img, cmap="RdBu", norm=sdf_norm)
-    ax.contour(sdf_img, levels=16, colors="k", linestyles="solid", linewidths=0.3)
-    ax.contour(sdf_img, levels=[0.0], colors="k", linestyles="solid", linewidths=0.6)
+    pos = ax.imshow(sdf_img, cmap='RdBu', norm=sdf_norm)
+    ax.contour(sdf_img, levels=16, colors='k', linestyles='solid', linewidths=0.3)
+    ax.contour(sdf_img, levels=[0.0], colors='k', linestyles='solid', linewidths=0.6)
     divider = make_axes_locatable(ax)
-    cax = divider.append_axes("right", size="5%", pad=0.1)
-    contour_fig.colorbar(pos, ax=ax, cax=cax, ticks=sdf_ticks, format="%.2f")
-    ax.axis("off")
+    cax = divider.append_axes('right', size='5%', pad=0.1)
+    contour_fig.colorbar(pos, ax=ax, cax=cax, ticks=sdf_ticks, format='%.2f')
+    ax.axis('off')
 
     return contour_fig

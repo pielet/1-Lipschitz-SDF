@@ -8,26 +8,30 @@ domain_size: 1.2
 domain_pivot: [-0.1, -0.1]
 
 # training
-epochs: 1
+epochs: 100
 batch_size: 128
 learning_rate: 0.001
 
-model_type: siren
+model_type: sll
 model:
   hidden_layers: 3
   hidden_units: 128
-  pe_dim: 0
-  pe_sigma: 1.0
-  pe_trainable: false
 
-loss_type: eikonal
+pos_enc_type: fourier
+pos_enc:
+  emb_size: 64
+  sigma: 1.0
+  trainable: true
+  spectral_norm: false
+
+loss_type: hkr
 loss:
-  lamb: 1e-2
-  margin: 0.1
+  lamb: 100
+  margin: 0.01
 
 evaluation:
   interval: 10
   resolution: 1000
 
 save_pretrained: true
-resume: false
+load_pretrained: false

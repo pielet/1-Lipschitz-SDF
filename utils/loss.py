@@ -5,7 +5,7 @@ from jax import numpy as jnp
 
 def mse(apply_fn, constants):
     def loss_fn(params, x, y):
-        y_pred = apply_fn({"params": params, "constants": constants}, x)
+        y_pred = apply_fn({'params': params, 'constants': constants}, x)
         loss = optax.l2_loss(y_pred, y)
         return loss.sum()  # batch loss
 
@@ -16,7 +16,7 @@ def eikonal(apply_fn, constants, lamb):
     def loss_fn(params, x, y):
         def forward(x):
             x = x.reshape(-1, x.shape[-1])  # [batch_size, in_dim]
-            return apply_fn({"params": params, "constants": constants}, x).squeeze()
+            return apply_fn({'params': params, 'constants': constants}, x).squeeze()
 
         y_pred, grad = jax.vmap(jax.value_and_grad(forward))(x)
         grad_norm = jnp.linalg.norm(grad, axis=1, keepdims=True)
@@ -40,9 +40,10 @@ def hKR(apply_fn, constants, margin, lamb, rho):
     """
 
     def loss_fn(params, x, y):
-        y_pred = apply_fn({"params": params, "constants": constants}, x)
+        y_pred = apply_fn({'params': params, 'constants': constants}, x)
         signed_y = y_pred * jnp.sign(y)
-        loss = (lamb * jnp.maximum(0.0, margin - signed_y) - signed_y) * rho(x, y)
+        # loss = (lamb * jnp.maximum(0.0, margin - signed_y) - signed_y) * rho(x, y)
+        loss = (lamb * jnp.maximum(0.0, margin - signed_y) + jnp.exp(-10 * signed_y)) * rho(x, y)
         return loss.sum()
 
     return loss_fn

@@ -16,8 +16,7 @@ from torch.utils.data import TensorDataset, DataLoader
 from tqdm import tqdm
 
 from gen_2d_dataset import parse_config, select_sdf
-from models.ffn import MLP, SIREN
-from models.sll import SLLNet
+from models import get_model
 from utils.logger import WandbLogger
 from utils.loss import eikonal, hKR, mse
 from utils.metric import evaluate_sdf_2d
@@ -25,7 +24,9 @@ from utils.plot import render_sdf_2d
 
 
 def save_pretrained(state, path):
-    checkpoints.save_checkpoint(ckpt_dir=os.path.abspath(path), target=state.params, step=state.step, overwrite=True)
+    checkpoints.save_checkpoint(
+        ckpt_dir=os.path.abspath(path), target=state.params, step=state.step, overwrite=True
+    )
 
 
 def load_pretrained(state, path):
@@ -60,11 +61,12 @@ def train(config, logger, ckpt_dir):
     eval_dataloader = DataLoader(eval_dataset, batch_size=config.batch_size, shuffle=False)
 
     # initialize model
-    models = {'siren': SIREN, 'ffn': MLP, 'sll': SLLNet}
-    model = safe_call(partial(models.get(config.model_type), out_dim=values.shape[1]), config.model)
+    model = get_model(values.shape[1], config)
 
     key = jax.random.PRNGKey(0)
-    variables = model.init(key, jnp.zeros((1, coordiates.shape[1])), mutable=['params', 'constants'])
+    variables = model.init(
+        key, jnp.zeros((1, coordiates.shape[1])), mutable=['params', 'constants']
+    )
     constants = variables['constants']
     # print(jax.tree_map(lambda x: x.dtype, variables['params']))
     tx = optax.adam(learning_rate=config.learning_rate)
@@ -97,7 +99,10 @@ def train(config, logger, ckpt_dir):
     def evaluate(state, coords):
         def forward(coords):
             coords = coords.reshape(-1, coords.shape[-1])  # [1, in_dim]
-            return state.apply_fn({'params': state.params, 'constants': constants}, coords).squeeze()
+            return state.apply_fn(
+                {'params': state.params, 'constants': constants}, coords
+            ).squeeze()
+
         return jax.vmap(jax.value_and_grad(forward))(coords)
 
     @jax.jit
@@ -105,7 +110,7 @@ def train(config, logger, ckpt_dir):
         value, grads = jax.value_and_grad(loss_fn)(state.params, coords, field)
         state = state.apply_gradients(grads=grads)
         return value, state
-    
+
     # load pretrained model
     if config.load_pretrained:
         load_pretrained(ts, ckpt_dir)
@@ -120,7 +125,7 @@ def train(config, logger, ckpt_dir):
             value, ts = step(ts, coords.numpy(), field.numpy())
             epoch_loss += value
         logger.log('train/loss', epoch_loss / len(train_dataset))
-        
+
         if epoch % config.evaluation.interval == 0:
             sdf_pred, grad_pred = [], []
             for batch in eval_dataloader:
@@ -129,7 +134,7 @@ def train(config, logger, ckpt_dir):
                 grad_pred.append(grad_batch)
             sdf_pred = np.concatenate(sdf_pred)
             grad_pred = np.concatenate(grad_pred, axis=0)
-            
+
             chamfer_dist, IoU, MSE, Eikonal = evaluate_sdf_2d(
                 eval_coords, sdf_pred, sdf_true, grad_pred
             )
@@ -159,8 +164,8 @@ if __name__ == '__main__':
     config = parse_config(sys.argv[1])
     logger = WandbLogger(project='1-lip-sdf', config=OmegaConf.to_container(config, resolve=True))
     ckpt_dir = os.path.join(
-                'output', f'{config.dataset}', f'{config.model_type}', f'{config.loss_type}'
-            )
+        'output', f'{config.dataset}', f'{config.model_type}', f'{config.loss_type}'
+    )
     os.makedirs(ckpt_dir, exist_ok=True)
 
     train(config, logger, ckpt_dir)
