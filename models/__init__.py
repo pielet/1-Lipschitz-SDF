@@ -40,7 +40,7 @@ def get_model(out_dim, config):
         # pos_enc = partial(GaborPE, emb_size=config.pos_enc.emb_size)
         pos_enc = safe_call(GaussianGaborPE, config.pos_enc)
     model = safe_call(
-        partial(model_zoo.get(config.model_type), out_dim=out_dim, pos_enc=pos_enc), config.model
+        partial(model_zoo[config.model_type], out_dim=out_dim, pos_enc=pos_enc), config.model
     )
     return model
 

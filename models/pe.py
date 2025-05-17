@@ -24,15 +24,12 @@ class GaussianFourierPE(nn.Module):
                 (m, d),
             )
         else:
-            B = self.variable(
-                'constants',
-                'B',
-                truncated_normal(
+            def init_B():
+                key = self.make_rng('constants')
+                return truncated_normal(
                     stddev=self.sigma, lower=-2.0 * self.sigma, upper=2.0 * self.sigma
-                ),
-                self.make_rng('constants'),
-                (m, d),
-            ).value
+                )(key, (m, d))
+            B = self.variable('constants', 'B', init_B).value
         sn = 1.0
         if self.spectral_norm:
             _, s, _ = jnp.linalg.svd(B, full_matrices=False)
@@ -76,18 +73,14 @@ class GaussianGaborPE(nn.Module):
             key = self.make_rng('constants')
             scale = self.variable('constants', 'scale', constant(self.scale_0), key, (1,)).value
             omega = self.variable('constants', 'omega', constant(self.omega_0), key, (1,)).value
-            B = self.variable(
-                'constants',
-                'B',
-                truncated_normal(
+            def init_B():
+                key = self.make_rng('constants')
+                return truncated_normal(
                     stddev=self.sigma, lower=-2.0 * self.sigma, upper=2.0 * self.sigma
-                ),
-                key,
-                (m, d),
-            ).value
+                )(key, (m, d))
+            B = self.variable('constants', 'B', init_B).value
         if self.spectral_norm:
             _, s, _ = jnp.linalg.svd(B, full_matrices=False)
-            scale = 2 * jnp.pi * jnp.max(s) * scale
         proj = 2 * jnp.pi * jnp.dot(x, B.T)
         exp = jnp.exp(-jnp.square(proj * scale))
         return jnp.concatenate([jnp.cos(omega * proj) * exp, jnp.sin(omega * proj) * exp], axis=-1)
