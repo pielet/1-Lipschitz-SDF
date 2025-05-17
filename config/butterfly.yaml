@@ -11,22 +11,23 @@ epochs: 100
 batch_size: 128
 learning_rate: 0.001
 
-model_type: siren
+model_type: sll
 model:
   hidden_layers: 3
   hidden_units: 128
   pe_dim: 128
-  pe_sigma: 1.0
+  pe_sigma: 10.0
   pe_trainable: false
 
-loss_type: mse
+loss_types: [hkr] # choices among [mse, eikonal, heat, hkr]
+loss_weights: [1.0]
 loss:
-  lamb: 1e-2
-  margin: 0.1
+  lamb: 100
+  margin: 0.01
 
 evaluation:
   interval: 10
   resolution: 1000
 
-save_pretrained: true
+save_pretrained: false
 resume: false

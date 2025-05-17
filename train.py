@@ -3,8 +3,6 @@ import os
 
 # os.environ['XLA_FLAGS'] = '--xla_gpu_autotune_level=0'  # disable autotune warnings
 
-from functools import partial
-
 import jax
 import optax
 import numpy as np
@@ -18,7 +16,7 @@ from tqdm import tqdm
 from gen_2d_dataset import parse_config, select_sdf
 from models import get_model
 from utils.logger import WandbLogger
-from utils.loss import eikonal, hKR, mse
+from utils.loss import get_loss_fn
 from utils.metric import evaluate_sdf_2d
 from utils.plot import render_sdf_2d
 
@@ -64,36 +62,16 @@ def train(config, logger, ckpt_dir):
     model = get_model(values.shape[1], config)
 
     key = jax.random.PRNGKey(0)
+    k1, k2 = jax.random.split(key)
     variables = model.init(
-        key, jnp.zeros((1, coordiates.shape[1])), mutable=['params', 'constants']
+        {'params': k1, 'constants': k2}, jnp.zeros((1, coordiates.shape[1])), mutable=['params', 'constants']
     )
     constants = variables['constants']
     # print(jax.tree_map(lambda x: x.dtype, variables['params']))
     tx = optax.adam(learning_rate=config.learning_rate)
     ts = train_state.TrainState.create(apply_fn=model.apply, params=variables['params'], tx=tx)
 
-    # loss function
-    # losses = {
-    #     'mse': mse,
-    #     'eikonal': eikonal,
-    #     'hkr': hKR,
-    # }
-    # loss_fn = safe_call(
-    #     partial(losses.get(config.loss_type), apply_fn=model.apply, constants=constants),
-    #     config.loss,
-    # )
-    if config.loss_type == 'mse':
-        loss_fn = mse(ts.apply_fn, constants)
-    elif config.loss_type == 'eikonal':
-        loss_fn = eikonal(ts.apply_fn, constants, lamb=config.loss.lamb)
-    elif config.loss_type == 'hkr':
-        loss_fn = hKR(
-            ts.apply_fn,
-            constants,
-            margin=config.loss.margin,
-            lamb=config.loss.lamb,
-            rho=lambda x, y: 1.0,
-        )
+    loss_fn = get_loss_fn(config, ts.apply_fn, constants)
 
     @jax.jit
     def evaluate(state, coords):
@@ -164,7 +142,7 @@ if __name__ == '__main__':
     config = parse_config(sys.argv[1])
     logger = WandbLogger(project='1-lip-sdf', config=OmegaConf.to_container(config, resolve=True))
     ckpt_dir = os.path.join(
-        'output', f'{config.dataset}', f'{config.model_type}', f'{config.loss_type}'
+        'output', f'{config.dataset}', f'{config.model_type}', f'{"_".join(config.loss_types)}'
     )
     os.makedirs(ckpt_dir, exist_ok=True)
 
