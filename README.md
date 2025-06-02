@@ -59,6 +59,7 @@ python train.py config/butterfly.yaml
 * [IGR](https://github.com/amosgropp/IGR)
 * [siren](https://github.com/vsitzmann/siren)
 * [ffn](https://github.com/tancik/fourier-feature-networks)
+* [wire](https://github.com/vishwa91/wire/)
 * [nerual-tanents](https://github.com/google/neural-tangents)
 * [1-Lipschitz neural distance field](https://github.com/GCoiffier/1-Lipschitz-Neural-Distance-Fields)
 * [deel-torchlip](https://github.com/deel-ai/deel-torchlip/)

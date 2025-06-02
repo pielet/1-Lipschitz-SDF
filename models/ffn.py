@@ -1,4 +1,5 @@
-from typing import Callable
+from collections.abc import Callable
+
 import jax.numpy as jnp
 from flax import linen as nn
 from jax.nn.initializers import glorot_normal, normal

@@ -1,14 +1,10 @@
-dataset: koch
+dataset: bunny
 
 # sample
 n_samples: 100000
-order: 3
-scale: 1.0
-domain_size: 1.4
-domain_pivot: [-0.2, -0.1]
 
 # training
-epochs: 200
+epochs: 100
 batch_size: 128
 learning_rate: 0.001
 
@@ -27,12 +23,12 @@ pos_enc:
 loss_types: [hkr] # choices among [mse, eikonal, heat, hkr]
 loss_weights: [1.0]
 loss:
-  lamb: 100
-  margin: 0.01
+  lamb: 1000
+  margin: 0.001
 
 evaluation:
   interval: 10
   resolution: 1000
 
-save_pretrained: true
-load_pretrained: false
+save_pretrained: false
+resume: false

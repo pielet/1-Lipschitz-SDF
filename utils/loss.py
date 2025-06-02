@@ -1,8 +1,9 @@
+import inspect
+from functools import partial
+
 import jax
 import optax
 from jax import numpy as jnp
-from functools import partial
-import inspect
 
 
 def mse(apply_fn, constants):
@@ -30,10 +31,9 @@ def eikonal(apply_fn, constants):
 
 def heat_loss(apply_fn, constants, lamb):
     """Heat loss introduced in https://arxiv.org/pdf/2411.14628 to avoid gradient discontinuities in Eikonal loss.
-    See https://sci-hub.lu/10.1002/cpa.3160200210 for proof of conversion between screened Poisson equation and distance field.
+    See https://sci-hub.lu/10.1002/cpa.3160200210 for proof of conversion between distance and equilibrium heat field obtained by solving screened Poisson equation.
 
     Args:
-        apply_fn: model apply function
         lamb: absorption coefficient
     """
 
@@ -56,10 +56,8 @@ def hKR(apply_fn, constants, margin, lamb):
     See: https://arxiv.org/pdf/2407.09505.
 
     Args:
-        apply_fn: model apply function
         margin: error threshold under which misclassification is ignored
         lamb: balance between HR and hinge loss
-        rho: probability distribution function
     """
 
     def loss_fn(params, x, y):
@@ -70,8 +68,8 @@ def hKR(apply_fn, constants, margin, lamb):
 
         y_pred = apply_fn({'params': params, 'constants': constants}, x)
         signed_y = y_pred * jnp.sign(y)
-        # loss = (lamb * jnp.maximum(0.0, margin - signed_y) - signed_y) * rho(x)
-        loss = (lamb * jnp.maximum(0.0, margin - signed_y) + jnp.exp(-0.1 * signed_y)) * rho(x)
+        loss = (lamb * jnp.maximum(0.0, margin - signed_y) - signed_y) * rho(x)
+        # loss = (lamb * jnp.maximum(0.0, margin - signed_y) + jnp.exp(-0.1 * signed_y)) * rho(x)
         return loss
 
     return loss_fn

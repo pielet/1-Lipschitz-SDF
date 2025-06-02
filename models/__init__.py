@@ -5,6 +5,7 @@ from .pe import GaussianFourierPE, GaussianGaborPE, FourierPE, GaborPE
 
 from functools import partial
 import inspect
+from typing import Callable
 
 
 model_zoo = {
@@ -15,10 +16,16 @@ model_zoo = {
 }
 
 
-def safe_call(func, args):
+def safe_call(func, args) -> Callable:
     sig = inspect.signature(func)
     valid_keys = sig.parameters.keys()
     return func(**{k: v for k, v in args.items() if k in valid_keys})
+
+
+def safe_partial(func, args) -> Callable:
+    sig = inspect.signature(func)
+    valid_keys = sig.parameters.keys()
+    return partial(func, **{k: v for k, v in args.items() if k in valid_keys})
 
 
 def get_model(out_dim, config):
@@ -34,11 +41,11 @@ def get_model(out_dim, config):
     """
     pos_enc = None
     if config.pos_enc_type == 'fourier':
-        # pos_enc = partial(FourierPE, emb_size=config.pos_enc.emb_size)
-        pos_enc = safe_call(GaussianFourierPE, config.pos_enc)
+        pos_enc = safe_partial(FourierPE, config.pos_enc)
+        # pos_enc = safe_call(GaussianFourierPE, config.pos_enc)
     elif config.pos_enc_type == 'gabor':
-        # pos_enc = partial(GaborPE, emb_size=config.pos_enc.emb_size)
-        pos_enc = safe_call(GaussianGaborPE, config.pos_enc)
+        pos_enc = safe_partial(GaborPE, config.pos_enc)
+        # pos_enc = safe_call(GaussianGaborPE, config.pos_enc)
     model = safe_call(
         partial(model_zoo[config.model_type], out_dim=out_dim, pos_enc=pos_enc), config.model
     )

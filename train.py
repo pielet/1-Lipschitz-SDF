@@ -1,16 +1,13 @@
-import inspect
 import os
 
-# os.environ['XLA_FLAGS'] = '--xla_gpu_autotune_level=0'  # disable autotune warnings
-
 import jax
-import optax
 import numpy as np
-from flax.training import train_state, checkpoints
+import optax
+import torch
+from flax.training import checkpoints, train_state
 from jax import numpy as jnp
 from omegaconf import OmegaConf
-import torch
-from torch.utils.data import TensorDataset, DataLoader
+from torch.utils.data import DataLoader, TensorDataset
 from tqdm import tqdm
 
 from gen_2d_dataset import parse_config, select_sdf
@@ -19,6 +16,8 @@ from utils.logger import WandbLogger
 from utils.loss import get_loss_fn
 from utils.metric import evaluate_sdf_2d
 from utils.plot import render_sdf_2d
+
+# os.environ['XLA_FLAGS'] = '--xla_gpu_autotune_level=0'  # disable autotune warnings
 
 
 def save_pretrained(state, path):
@@ -29,12 +28,6 @@ def save_pretrained(state, path):
 
 def load_pretrained(state, path):
     checkpoints.restore_checkpoint(ckpt_dir=os.path.abspath(path), target=state.params)
-
-
-def safe_call(func, args):
-    sig = inspect.signature(func)
-    valid_keys = sig.parameters.keys()
-    return func(**{k: v for k, v in args.items() if k in valid_keys})
 
 
 def train(config, logger, ckpt_dir):
@@ -64,7 +57,9 @@ def train(config, logger, ckpt_dir):
     key = jax.random.PRNGKey(0)
     k1, k2 = jax.random.split(key)
     variables = model.init(
-        {'params': k1, 'constants': k2}, jnp.zeros((1, coordiates.shape[1])), mutable=['params', 'constants']
+        {'params': k1, 'constants': k2},
+        jnp.zeros((1, coordiates.shape[1])),
+        mutable=['params', 'constants'],
     )
     constants = variables['constants']
     # print(jax.tree_map(lambda x: x.dtype, variables['params']))

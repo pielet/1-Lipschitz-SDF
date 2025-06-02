@@ -1,7 +1,8 @@
-from typing import Callable
+from collections.abc import Callable
+
 import jax.numpy as jnp
 from flax import linen as nn
-from flax.linen.initializers import normal, lecun_normal, zeros_init
+from flax.linen.initializers import lecun_normal, normal, zeros_init
 
 
 def safe_inv(x, eps=1e-6):
@@ -50,6 +51,7 @@ class SLL(nn.Module):
         # forward
         res = jnp.dot(x, weight.T) + bias  # linear
         res = nn.relu(res) * t[None, :]  # ReLU + scale
+        # res = jnp.sin(res) * t[None, :]
         res = 2 * jnp.dot(res, weight)  # project back
         out = x - res  # final residual
         return out

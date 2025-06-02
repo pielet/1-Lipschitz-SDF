@@ -17,17 +17,19 @@ model:
   hidden_layers: 3
   hidden_units: 128
 
-pos_enc_type: fourier # choice of [none, fourier, gabor]
+pos_enc_type: none # choice of [none, fourier, gabor]
 pos_enc:
   emb_size: 128
-  sigma: 1.0
+  sigma: 1.0 # random initialization from Gaussian distribution
+  omega: 2.0 # Gabor wavelet frequency
+  scale: 1.0 # Gabor wavelet scale
   trainable: false
   spectral_norm: true
 
 loss_types: [hkr] # choices among [mse, eikonal, heat, hkr]
 loss_weights: [1.0]
 loss:
-  lamb: 100
+  lamb: 1000
   margin: 0.01
 
 evaluation:
