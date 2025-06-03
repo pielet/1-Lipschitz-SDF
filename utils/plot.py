@@ -2,6 +2,7 @@ import matplotlib.colors as colors
 import matplotlib.pyplot as plt
 import numpy as np
 from mpl_toolkits.axes_grid1 import make_axes_locatable
+from sdf import sample_slice
 
 
 def colorbar_params(field, center, n_ticks=4, eps=1e-4):
@@ -92,3 +93,21 @@ def render_ground_truth_2d(f, pivot, domain_size, resolution=1000):
     ax.axis('off')
 
     return contour_fig
+
+
+def render_ground_truth_slice_3d(*args, **kwargs):
+    """
+    Visualize a 2D slice of the 3D SDF with contour
+    """
+    sdf_img, extent, axes = sample_slice(*args, **kwargs)
+    sdf_norm, sdf_ticks = colorbar_params(sdf_img, 0.0)
+    fig, ax = plt.subplots(figsize=(8, 8))
+    im = ax.imshow(sdf_img, cmap='RdBu', norm=sdf_norm)
+    ax.contour(sdf_img, levels=16, colors='k', linestyles='solid', linewidths=0.3)
+    ax.contour(sdf_img, levels=[0.0], colors='k', linestyles='solid', linewidths=0.6)
+    divider = make_axes_locatable(ax)
+    cax = divider.append_axes('right', size='5%', pad=0.1)
+    fig.colorbar(im, ax=ax, cax=cax, ticks=sdf_ticks, format='%.2f')
+    ax.axis('off')
+
+    return fig

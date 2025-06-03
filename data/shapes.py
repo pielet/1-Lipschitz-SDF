@@ -18,7 +18,7 @@ class Mesh:
     @classmethod
     def from_obj(cls, obj_path: str):
         v, f = igl.read_triangle_mesh(obj_path)
-        return cls(v, f, v.shape[1], igl.edges(f))
+        return cls(v, f, igl.edges(f))
 
     def normalize(self):
         min_v = np.min(self.vertices, axis=0)

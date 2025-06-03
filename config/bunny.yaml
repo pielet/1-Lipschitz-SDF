@@ -2,6 +2,8 @@ dataset: bunny
 
 # sample
 n_samples: 100000
+voxel_size: 0.01
+half_width: 1.0  # fully covers unit cube
 
 # training
 epochs: 100
