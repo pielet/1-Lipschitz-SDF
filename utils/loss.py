@@ -29,9 +29,11 @@ def eikonal(apply_fn, constants):
     return loss_fn
 
 
-def heat_loss(apply_fn, constants, lamb):
-    """Heat loss introduced in https://arxiv.org/pdf/2411.14628 to avoid gradient discontinuities in Eikonal loss.
-    See https://sci-hub.lu/10.1002/cpa.3160200210 for proof of conversion between distance and equilibrium heat field obtained by solving screened Poisson equation.
+def heat_loss(apply_fn, constants, heat_lamb):
+    """Heat loss introduced in https://arxiv.org/pdf/2411.14628
+    to avoid gradient discontinuities in Eikonal loss.
+    See https://sci-hub.lu/10.1002/cpa.3160200210 for proof of conversion between
+    distance and equilibrium heat field obtained by solving screened Poisson equation.
 
     Args:
         lamb: absorption coefficient
@@ -43,7 +45,7 @@ def heat_loss(apply_fn, constants, lamb):
 
         y_pred, grad = jax.vmap(jax.value_and_grad(forward))(x)
         grad_norm = jnp.linalg.norm(grad, axis=1, keepdims=True)
-        loss = jnp.exp(-2.0 * lamb * jnp.abs(y_pred)) * (
+        loss = jnp.exp(-2.0 * heat_lamb * jnp.abs(y_pred)) * (
             jnp.square(grad_norm) + jnp.full_like(grad_norm, 1.0)
         )
         return loss
@@ -62,7 +64,7 @@ def hKR(apply_fn, constants, margin, lamb):
 
     def loss_fn(params, x, y):
         def rho(coords):
-            x0, x1 = coords[:, 0], coords[:, 1]
+            x0, _ = coords[:, 0], coords[:, 1]
             # TODO: design a weight function
             return jnp.ones_like(x0)
 

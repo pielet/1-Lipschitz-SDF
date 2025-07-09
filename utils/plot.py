@@ -95,11 +95,11 @@ def render_ground_truth_2d(f, pivot, domain_size, resolution=1000):
     return contour_fig
 
 
-def render_ground_truth_slice_3d(*args, **kwargs):
+def render_ground_truth_slice_3d(sdf, *args, **kwargs):
     """
     Visualize a 2D slice of the 3D SDF with contour
     """
-    sdf_img, extent, axes = sample_slice(*args, **kwargs)
+    sdf_img, extent, axes = sample_slice(sdf, *args, **kwargs)
     sdf_norm, sdf_ticks = colorbar_params(sdf_img, 0.0)
     fig, ax = plt.subplots(figsize=(8, 8))
     im = ax.imshow(sdf_img, cmap='RdBu', norm=sdf_norm)
@@ -111,3 +111,37 @@ def render_ground_truth_slice_3d(*args, **kwargs):
     ax.axis('off')
 
     return fig
+
+
+def render_sdf_slice_3d(sdf, grad, *args, **kwargs):
+    """
+    Visualize a 2D slice of 3D sdf and gradient
+    """
+    sdf_img, extent, axes = sample_slice(sdf, *args, **kwargs)
+    grad_img, extent, axes = sample_slice(np.linalg.norm(grad, axis=1), *args, **kwargs)
+
+    print(f'SDF min: {np.min(sdf_img)}, max: {np.max(sdf_img)}')
+    print(f'|∇f| min: {np.min(grad_img)}, max: {np.max(grad_img)}')
+
+    # contours
+    contour_fig, ax = plt.subplots(figsize=(8, 8))
+    sdf_norm, sdf_ticks = colorbar_params(sdf_img, 0.0)
+    pos = ax.imshow(sdf_img, cmap='RdBu', norm=sdf_norm)
+    ax.contour(sdf_img, levels=16, colors='k', linestyles='solid', linewidths=0.3)
+    ax.contour(sdf_img, levels=[0.0], colors='k', linestyles='solid', linewidths=0.6)
+    divider = make_axes_locatable(ax)
+    cax = divider.append_axes('right', size='5%', pad=0.1)
+    contour_fig.colorbar(pos, ax=ax, cax=cax, ticks=sdf_ticks, format='%.2f')
+    ax.axis('off')
+
+    # gradients
+    grad_fig, ax = plt.subplots(figsize=(8, 8))
+    grad_norm, grad_ticks = colorbar_params(grad_img, 1.0)
+    pos = ax.imshow(grad_img, cmap='RdBu', norm=grad_norm)
+    ax.contour(sdf_img, levels=[0.0], colors='k', linestyles='solid', linewidths=0.6)
+    divider = make_axes_locatable(ax)
+    cax = divider.append_axes('right', size='5%', pad=0.1)
+    grad_fig.colorbar(pos, ax=ax, cax=cax, ticks=grad_ticks, format='%.2f')
+    ax.axis('off')
+
+    return contour_fig, grad_fig

@@ -11,11 +11,12 @@ from torch.utils.data import DataLoader, TensorDataset
 from tqdm import tqdm
 
 from gen_2d_dataset import parse_config, select_sdf
+from gen_3d_dataset import get_mesh_sdf
 from models import get_model
 from utils.logger import WandbLogger
 from utils.loss import get_loss_fn
-from utils.metric import evaluate_sdf_2d
-from utils.plot import render_sdf_2d
+from utils.metric import evaluate_sdf
+from utils.plot import render_sdf_2d, render_sdf_slice_3d
 
 # os.environ['XLA_FLAGS'] = '--xla_gpu_autotune_level=0'  # disable autotune warnings
 
@@ -30,6 +31,42 @@ def load_pretrained(state, path):
     checkpoints.restore_checkpoint(ckpt_dir=os.path.abspath(path), target=state.params)
 
 
+def get_gt_sdf(cfg):
+    if cfg.dim == 2:
+        return select_sdf(cfg)
+    elif cfg.dim == 3:
+        _, sdf = get_mesh_sdf(cfg)
+        return sdf
+
+
+def get_eval_coords(cfg):
+    if cfg.dim == 2:
+        X, Y = np.mgrid[
+            cfg.domain_pivot[0] : cfg.domain_pivot[0] + cfg.domain_size : cfg.domain_size
+            / cfg.evaluation.resolution,
+            cfg.domain_pivot[1] : cfg.domain_pivot[1] + cfg.domain_size : cfg.domain_size
+            / cfg.evaluation.resolution,
+        ]
+        eval_coords = np.column_stack((X.ravel(), Y.ravel()))
+    elif cfg.dim == 3:
+        mesh, _ = get_mesh_sdf(cfg)
+        bbox_min, bbox_max = mesh.bounding_box
+        X, Y, Z = np.mgrid[
+            bbox_min[0] - cfg.padding : bbox_max[0] + cfg.padding : 1.0 / cfg.evaluation.resolution,
+            bbox_min[1] - cfg.padding : bbox_max[1] + cfg.padding : 1.0 / cfg.evaluation.resolution,
+            bbox_min[2] - cfg.padding : bbox_max[2] + cfg.padding : 1.0 / cfg.evaluation.resolution,
+        ]
+        eval_coords = np.column_stack((X.ravel(), Y.ravel(), Z.ravel()))
+    return eval_coords
+
+
+def get_render_fn(dim):
+    if dim == 2:
+        return render_sdf_2d
+    elif dim == 3:
+        return render_sdf_slice_3d
+
+
 def train(config, logger, ckpt_dir):
     # load training dataset
     data = np.load(f'input/{config.dataset}.npz')
@@ -37,16 +74,10 @@ def train(config, logger, ckpt_dir):
     train_dataset = TensorDataset(torch.Tensor(coordiates), torch.Tensor(values))
     print(f'Loaded {len(train_dataset)} samples from {config.dataset}')
     train_dataloader = DataLoader(train_dataset, batch_size=config.batch_size, shuffle=True)
-    sdf = select_sdf(config)
+    sdf = get_gt_sdf(config)
 
     # evaluation dataset
-    X, Y = np.mgrid[
-        config.domain_pivot[0] : config.domain_pivot[0] + config.domain_size : config.domain_size
-        / config.evaluation.resolution,
-        config.domain_pivot[1] : config.domain_pivot[1] + config.domain_size : config.domain_size
-        / config.evaluation.resolution,
-    ]
-    eval_coords = np.column_stack((X.ravel(), Y.ravel()))
+    eval_coords = get_eval_coords(config)
     sdf_true = sdf(eval_coords).squeeze()
     eval_dataset = TensorDataset(torch.Tensor(eval_coords))
     eval_dataloader = DataLoader(eval_dataset, batch_size=config.batch_size, shuffle=False)
@@ -108,7 +139,7 @@ def train(config, logger, ckpt_dir):
             sdf_pred = np.concatenate(sdf_pred)
             grad_pred = np.concatenate(grad_pred, axis=0)
 
-            chamfer_dist, IoU, MSE, Eikonal = evaluate_sdf_2d(
+            chamfer_dist, IoU, MSE, Eikonal = evaluate_sdf(
                 eval_coords, sdf_pred, sdf_true, grad_pred
             )
             logger.log('train/chamfer_dist', chamfer_dist)
@@ -116,7 +147,9 @@ def train(config, logger, ckpt_dir):
             logger.log('train/mse', MSE)
             logger.log('train/eikonal', Eikonal)
 
-            contour_fig, grad_fig = render_sdf_2d(sdf_pred, grad_pred, config.evaluation.resolution)
+            contour_fig, grad_fig = get_render_fn(config.dim)(
+                sdf_pred, grad_pred, config.evaluation.resolution
+            )
             logger.log_image('contour', contour_fig, 'level-set contour')
             logger.log_image('grad', grad_fig, 'gradient magnitude')
 

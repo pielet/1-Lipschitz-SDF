@@ -2,7 +2,7 @@ import numpy as np
 from scipy.spatial import cKDTree
 
 
-def evaluate_sdf_2d(coords, sdf_pred, sdf_true, grad_pred, eps=5e-3):
+def evaluate_sdf(coords, sdf_pred, sdf_true, grad_pred, eps=5e-3):
     """Evaluate soft chamfer distance, IoU, and MSE between the predicted and true SDF.
 
     Args:
