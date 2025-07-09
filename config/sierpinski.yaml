@@ -1,4 +1,5 @@
 dataset: sierpinski
+dim: 2
 
 # sample
 n_samples: 100000

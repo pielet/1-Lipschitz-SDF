@@ -1,4 +1,5 @@
 dataset: butterfly
+dim: 2
 
 # sample
 n_samples: 100000

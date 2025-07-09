@@ -1,10 +1,10 @@
-dataset: bunny
+dataset: armadillo
 dim: 3
 
 # sample
 n_samples: 100000
 voxel_size: 0.01
-half_width: 2.0  # fully covers unit cube
+half_width: 1.0  # fully covers unit cube
 padding: 0.2
 
 # training
