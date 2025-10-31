@@ -1,6 +1,6 @@
 # 1-lipschitz network
 
-to make hyperparameter tuning easier, and explore different nn architectures.
+Make hyperparameter tuning easier, and explore different network architectures.
 
 ## Environment
 
@@ -53,6 +53,12 @@ Choose model from SIREN, FFN, or SLL. SLL uses semi-supervised loss which only r
 ```bash
 python train.py config/butterfly.yaml
 ```
+
+## Examples
+
+![Koch snowflake](imgs/koch.png)
+
+![Sierpinski triangle](imgs/sierpinski.png)
 
 **Reference repo:**
 * [awesome-implicit-representations](https://github.com/vsitzmann/awesome-implicit-representations)
