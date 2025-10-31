@@ -56,9 +56,8 @@ python train.py config/butterfly.yaml
 
 ## Examples
 
-![Koch snowflake](imgs/koch.png)
-
-![Sierpinski triangle](imgs/sierpinski.png)
+<img src="imgs/koch.png" alt="Koch snowflake" width="600" />
+<img src="imgs/sierpinski.png" alt="Sierpinski triangle" width="600" />
 
 **Reference repo:**
 * [awesome-implicit-representations](https://github.com/vsitzmann/awesome-implicit-representations)
